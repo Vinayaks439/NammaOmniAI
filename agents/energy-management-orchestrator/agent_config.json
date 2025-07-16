@@ -1,0 +1,56 @@
+{
+  "agents": [
+    {
+      "name": "BESCOMEventAgent",
+      "description": "Handles events related to BESCOM operations.",
+      "model": "gemini-2.0-flash",
+      "instruction": "Handle BESCOM events for energy management. Details: {details}",
+      "input_schema": null,
+      "output_key": "bescom_event_result",
+      "execution": {
+        "enabled": true,
+        "frequency": "5m"
+      },
+      "settings": {
+        "event_types": ["power_outage", "maintenance", "alerts"],
+        "notification_channel": "email"
+      }
+    },
+    {
+      "name": "AccidentAgent",
+      "description": "Monitors and responds to accident reports.",
+      "model": "gemini-2.0-flash",
+      "instruction": "Report accident details for energy management. Details: {details}",
+      "input_schema": null,
+      "output_key": "accident_result",
+      "execution": {
+        "enabled": true,
+        "frequency": "10m"
+      },
+      "settings": {
+        "reporting_channels": ["sms", "app_notification"],
+        "response_time": "15m"
+      }
+    },
+    {
+      "name": "EnvironmentAgent",
+      "description": "Tracks environmental conditions and impacts.",
+      "model": "gemini-2.0-flash",
+      "instruction": "Monitor environmental conditions relevant to energy management. Metrics: {metrics}",
+      "input_schema": null,
+      "output_key": "environment_result",
+      "execution": {
+        "enabled": true,
+        "frequency": "30m"
+      },
+      "settings": {
+        "monitored_parameters": ["temperature", "humidity", "pollution_levels"],
+        "alert_thresholds": {
+          "temperature": 35,
+          "humidity": 80,
+          "pollution_levels": 100
+        }
+      }
+    }
+  ]
+}
