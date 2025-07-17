@@ -1,0 +1,45 @@
+{
+  "agents": [
+    {
+      "name": "OutageScraperAgent",
+      "type": "outage_scraper",
+      "description": "Discovers and scrapes power-outage data for Bengaluru; geocodes via Gemini.",
+      "model": {
+        "provider": "google",
+        "id": "gemini-2.5-pro",
+        "api_key_env": "GEMINI_API_KEY"
+      },
+      "execution": {
+        "enabled": true,
+        "frequency": "15m"
+      },
+      "settings": {
+        "sources": [
+          "https://bescom.karnataka.gov.in/page/en/consumer/power-cuts",
+          "https://www.thehindu.com/news/cities/bangalore/"
+        ],
+        "dynamic_sources": true,
+        "dynamic_keywords": [
+          "Bengaluru power cut",
+          "load shedding",
+          "BESCOM notice"
+        ],
+        "google_search_api_key_env": "GOOGLE_SEARCH_API_KEY",
+        "google_cse_id_env": "GOOGLE_CSE_ID",
+        "geocode": true
+      },
+      "prompts": {
+        "geocode": "You are a JSON-only API. For each Bengaluru locality below, return an object {\"location\",\"latitude\",\"longitude\"}. Return an array, no commentary, valid JSON.\n{locations}"
+      }
+    }
+  ],
+  "tools": {
+    "embedding_query":     "Power cut or outage in bengaluru or bangalore",
+    "embedding_threshold": 0.30,
+    "embedding_model":     "gemini-embedding-001",
+    "extract_prompt":      "Extract every *power outage* event mentioned in the HTML below. Return STRICT JSON as an array of objects with keys: location, start_time (YYYY-MM-DD HH:MM), end time(YYYY-MM-DD HH:MM) reason.\nHTML:\n{html}",
+    "extract_model":       "gemini-2.5-pro",
+    "render_timeout_ms":   60000,
+    "render_wait_until":   "domcontentloaded"
+  }
+}
