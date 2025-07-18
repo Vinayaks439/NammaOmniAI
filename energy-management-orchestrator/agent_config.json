@@ -1,0 +1,5 @@
+{
+  "model_id": "gemini-2.5-pro",
+  "temperature": 0.3,
+  "default_prompt": "Use Google Search to find official BESCOM power-cut notices for Bengaluru issued in the last 5 days. Return ONE JSON array with objects that have exactly these keys: location, start_time (ISO-8601), end_time (ISO-8601 or null), reason."
+}
