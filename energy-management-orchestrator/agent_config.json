@@ -1,0 +1,22 @@
+{
+  "agents": [
+    {
+      "name": "OutageScraperAgent",
+      "description": "Fetches recent BESCOM power cut events in Bengaluru using Gemini + GoogleSearch grounding; outputs JSON with location, start_time, end_time, and reason.",
+      "model": {
+        "api_key_env": "GEMINI_API_KEY"
+      },
+      "tools": {
+        "outage_summary": {
+          "model_id": "gemini-2.5-pro",
+          "temperature": 0.3,
+          "prompt": "Use the GoogleSearch tool to find **official BESCOM power cut notices** for Bengaluru issued in the **last 7 days**. For each event, output a JSON object with exactly these fields:\n  • location (area affected)\n  • start_time (ISO-8601 start)\n  • end_time (ISO-8601 end or null)\n  • reason (official explanation)\nReturn a single JSON array—no extra text or commentary."
+        }
+      },
+      "execution": {
+        "enabled": true,
+        "frequency": "15m"
+      }
+    }
+  ]
+}

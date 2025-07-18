@@ -1,0 +1,4 @@
+google-genai>=0.1.0      # Google Gen AI SDK for Gemini API :contentReference[oaicite:0]{index=0}
+google-adk>=0.1.0        # Agent Development Kit (ADK) for google.adk.* modules :contentReference[oaicite:1]{index=1}
+pydantic>=2.0.0          # Data validation with BaseModel :contentReference[oaicite:2]{index=2}
+geopy>=2.0.0
