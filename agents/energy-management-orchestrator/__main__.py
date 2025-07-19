@@ -1,26 +1,20 @@
 """
-orca.py – CLI launcher for BESCOMOutageAgent.
+python -m agents.bescom_outage    → launches the agent via ADK
+adk run agents.bescom_outage      → same effect
 """
-
-import asyncio
-import logging
-import uuid
-
+import asyncio, uuid, logging
 from google.adk.sessions import InMemorySessionService
 from google.adk.agents.invocation_context import InvocationContext
+from .agent import make_bescom_agent     # factory from agent.py
 
-from agent import make_bescom_agent
-
-
-async def main() -> None:
+async def _main() -> None:
     logging.basicConfig(level=logging.INFO)
-
     agent = make_bescom_agent()
 
     sess_service = InMemorySessionService()
     session = await sess_service.create_session(
-        session_id="session-1",
-        app_name="outage-cli",
+        session_id="bescom-cli",
+        app_name="bescom-outage",
         user_id="cli",
     )
 
@@ -35,6 +29,6 @@ async def main() -> None:
         if ev.content and ev.content.parts:
             print(ev.content.parts[0].text)
 
-
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(_main())
+
