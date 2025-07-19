@@ -27,128 +27,10 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// Mock data for development
-const mockEvents: Event[] = [
-  {
-    id: "1",
-    title: "Heavy Traffic on Outer Ring Road",
-    description:
-      "Slow moving traffic reported between Silk Board and Electronic City due to ongoing road construction work.",
-    category: "traffic",
-    severity: "high",
-    source: "user_report",
-    location: {
-      lat: 12.9279,
-      lng: 77.6271,
-      address: "Outer Ring Road, Electronic City",
-    },
-    timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 mins ago
-    verificationCount: 15,
-    isVerified: true,
-    status: "active",
-    aiAnalysis: {
-      confidence: 0.92,
-      summary:
-        "Major traffic congestion confirmed by multiple user reports and AI analysis of traffic patterns.",
-      suggestedActions: [
-        "Use alternate route via Hosur Road",
-        "Allow extra 45 minutes for travel",
-      ],
-    },
-  },
-  {
-    id: "2",
-    title: "Water Logging at Majestic Circle",
-    description:
-      "Severe water logging reported near Majestic Bus Station. Roads are flooded and vehicles are stranded.",
-    category: "civic",
-    severity: "critical",
-    source: "social_media",
-    location: {
-      lat: 12.9767,
-      lng: 77.5733,
-      address: "Majestic Circle, KR Market",
-    },
-    timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // 15 mins ago
-    verificationCount: 8,
-    isVerified: true,
-    status: "investigating",
-    imageUrl: "/placeholder.svg",
-  },
-  {
-    id: "3",
-    title: "Cultural Festival at Lalbagh",
-    description:
-      "Annual flower show and cultural festival is ongoing. High footfall expected throughout the day.",
-    category: "event",
-    severity: "medium",
-    source: "official",
-    location: {
-      lat: 12.9507,
-      lng: 77.5848,
-      address: "Lalbagh Botanical Garden",
-    },
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-    verificationCount: 3,
-    isVerified: true,
-    status: "active",
-  },
-  {
-    id: "4",
-    title: "Power Cut in Indiranagar",
-    description:
-      "Unscheduled power outage affecting Indiranagar, HAL 2nd Stage, and surrounding areas.",
-    category: "civic",
-    severity: "medium",
-    source: "user_report",
-    location: {
-      lat: 12.9719,
-      lng: 77.6412,
-      address: "Indiranagar, HAL 2nd Stage",
-    },
-    timestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(), // 45 mins ago
-    verificationCount: 12,
-    isVerified: true,
-    status: "investigating",
-  },
-  {
-    id: "5",
-    title: "Emergency: Fire at Commercial Street",
-    description:
-      "Fire reported at a commercial building. Fire department and emergency services are on site.",
-    category: "emergency",
-    severity: "critical",
-    source: "official",
-    location: {
-      lat: 12.9833,
-      lng: 77.6092,
-      address: "Commercial Street, Shivaji Nagar",
-    },
-    timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString(), // 10 mins ago
-    verificationCount: 5,
-    isVerified: true,
-    status: "active",
-  },
-];
-
-const getCategoryColor = (category: string) => {
-  switch (category) {
-    case "traffic":
-      return "bg-traffic text-traffic-foreground";
-    case "civic":
-      return "bg-civic text-civic-foreground";
-    case "event":
-      return "bg-event text-event-foreground";
-    case "emergency":
-      return "bg-emergency text-emergency-foreground";
-    default:
-      return "bg-muted text-muted-foreground";
-  }
-};
+import { streamEvents } from "@/services/grpcClient";
 
 export default function Dashboard() {
-  const [events, setEvents] = useState<Event[]>(mockEvents);
+  const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | undefined>();
   const [showEventDialog, setShowEventDialog] = useState(false);
 
@@ -157,6 +39,43 @@ export default function Dashboard() {
     setShowEventDialog(true);
   };
 
+  // Replace mock/event polling with grpc streaming
+  useEffect(() => {
+    const grpcStream = streamEvents(
+      (event: Event & { timestamp?: string | number }) => {
+        // Optionally, filter duplicate events or update state as required
+        setEvents((prev) => [
+          ...prev,
+          {
+            id: event.id,
+            title: event.title,
+            description: event.description,
+            category: event.category as Event["category"],
+            severity: event.severity as Event["severity"],
+            status: event.status as Event["status"],
+            source: (event as any).source ?? "unknown", // fallback if source is missing
+            location: (event as any).location ?? { address: "", lat: 0, lng: 0 },
+            timestamp: typeof event.timestamp === "string" ? event.timestamp : new Date().toISOString(),
+            verificationCount: (event as any).verificationCount ?? 0,
+            isVerified: (event as any).isVerified ?? false,
+            aiAnalysis: (event as any).aiAnalysis,
+            imageUrl: (event as any).imageUrl,
+          } as Event,
+        ]);
+      },
+      (err) => {
+        console.error("Error in grpc stream:", err);
+      }
+    );
+
+    // If your stream supports cancellation:
+    return () => {
+      // If grpcStream is not void, add cancellation logic here.
+      // Currently, streamEvents returns void, so nothing to clean up.
+    };
+  }, []);
+
+  // You can derive stats based on the dynamic events
   const stats = {
     active: events.filter((e) => e.status === "active").length,
     critical: events.filter((e) => e.severity === "critical").length,
@@ -167,7 +86,6 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col h-screen bg-background">
       <Header />
-
       {/* Stats bar */}
       <div className="border-b bg-card">
         <div className="container py-3">
@@ -389,3 +307,18 @@ export default function Dashboard() {
     </div>
   );
 }
+
+const getCategoryColor = (category: string) => {
+  switch (category) {
+    case "traffic":
+      return "bg-traffic text-traffic-foreground";
+    case "civic":
+      return "bg-civic text-civic-foreground";
+    case "event":
+      return "bg-event text-event-foreground";
+    case "emergency":
+      return "bg-emergency text-emergency-foreground";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+};
