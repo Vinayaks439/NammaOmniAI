@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package geofence.v1;
+
+option go_package = "backend/gen/geofence/v1;geofencev1";
+
+// A request containing all localities detected within the geofence.
+message RecieveLocalitiesRequest {
+  // The names of the localities/sub-localities inside the geofence.
+  repeated string localities = 1;
+}
+
+// A response acknowledging receipt of the localities.
+message RecieveLocalitiesResponse {
+  // Whether the server successfully processed the localities.
+  bool success = 1;
+  // Optional human-readable status or error message.
+  string message = 2;
+}
+
+// The Geofencing service definition.
+// This uses a unary RPC: one request → one response. :contentReference[oaicite:0]{index=0}
+service GeofencingService {
+  // Recieve all detected localities to the server in one batch :contentReference[oaicite:1]{index=1}.
+  rpc RecieveLocalities(RecieveLocalitiesRequest) returns (RecieveLocalitiesResponse);
+}

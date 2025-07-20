@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>NammaOmni AI – Energy Events Stream</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #events { list-style: none; padding: 0; }
+    #events li { margin: 8px 0; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    #error { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Live Energy Management Events</h1>
+  <div id="error"></div>
+  <ul id="events"></ul>
+
+  <script>
+  (function(){
+    const endpoint = 'http://localhost:8080/energymanagementevents.v1.EnergyManagementEventsService/StreamEnergyManagementEvents';
+
+    // 1) Build a Connect-JSON request envelope:
+    const reqObj = { filter: "ALL" };
+    const encoder = new TextEncoder();
+    const jsonBytes = encoder.encode(JSON.stringify(reqObj));
+    const header = new Uint8Array(5);
+    header[0] = 0; // no compression
+    const len = jsonBytes.length;
+    header[1] = (len >>> 24) & 0xff;
+    header[2] = (len >>> 16) & 0xff;
+    header[3] = (len >>>  8) & 0xff;
+    header[4] = (len       ) & 0xff;
+
+    // Combine header + payload
+    const body = new Uint8Array(header.length + jsonBytes.length);
+    body.set(header, 0);
+    body.set(jsonBytes, header.length);
+
+    // 2) Fire the fetch over HTTP/2 (h2c) 
+    fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/connect+json; charset=utf-8',
+        'Accept':        'application/connect+json; charset=utf-8'
+      },
+      body
+    })
+    .then(resp => {
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      if (!resp.body) throw new Error("No response stream");
+      
+      const reader = resp.body.getReader();
+      let buffer = new Uint8Array();
+      const decoder = new TextDecoder();
+
+      // 3) Read & parse the gRPC‐framed stream
+      function readChunk() {
+        reader.read().then(({ done, value }) => {
+          if (done) return;
+          // append new bytes
+          const tmp = new Uint8Array(buffer.length + value.length);
+          tmp.set(buffer);
+          tmp.set(value, buffer.length);
+          buffer = tmp;
+
+          let offset = 0;
+          // while we have at least a full 5-byte header
+          while (buffer.length >= offset + 5) {
+            const msgLen = 
+              (buffer[offset+1] << 24) |
+              (buffer[offset+2] << 16) |
+              (buffer[offset+3] << 8) |
+              (buffer[offset+4]);
+            if (buffer.length >= offset + 5 + msgLen) {
+              // extract payload
+              const msgBytes = buffer.slice(offset + 5, offset + 5 + msgLen);
+              offset += 5 + msgLen;
+              // decode & JSON.parse
+              const text = decoder.decode(msgBytes);
+              let msg;
+              try { msg = JSON.parse(text); }
+              catch(e) { console.error("Invalid JSON:", text); continue; }
+              // render to DOM
+              const li = document.createElement('li');
+              li.textContent = 
+                new Date(msg.timestamp * 1000).toLocaleTimeString()
+                + " — " + msg.payload;
+              document.getElementById('events').appendChild(li);
+            } else {
+              break; // wait for more bytes
+            }
+          }
+          // keep remainder
+          buffer = buffer.slice(offset);
+          // read next
+          readChunk();
+        }).catch(err => {
+          console.error(err);
+          document.getElementById('error').textContent = err.message;
+        });
+      }
+
+      readChunk();
+    })
+    .catch(err => {
+      console.error(err);
+      document.getElementById('error').textContent = err.message;
+    });
+  })();
+  </script>
+</body>
+</html>

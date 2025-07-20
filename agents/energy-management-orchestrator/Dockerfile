@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 5. copy project code
 #    adjust the source path if your repo layout differs
-COPY agents ./agents
+COPY . ./agents
 
 # 6. environment variables
 #    – model + temperature are read from agent_config.json
@@ -26,5 +26,5 @@ ENV PYTHONUNBUFFERED=1 \
 
 # 7. default command
 #    change the path if you moved or renamed orca.py
-CMD ["python", "agents/energy-management-orchestrator/orca.py"]
+CMD ["python", "agents/orca.py"]
 
