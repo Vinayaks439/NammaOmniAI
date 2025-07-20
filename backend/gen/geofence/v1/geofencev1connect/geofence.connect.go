@@ -33,15 +33,15 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// GeofencingServiceSendLocalitiesProcedure is the fully-qualified name of the GeofencingService's
-	// SendLocalities RPC.
-	GeofencingServiceSendLocalitiesProcedure = "/geofence.v1.GeofencingService/SendLocalities"
+	// GeofencingServiceRecieveLocalitiesProcedure is the fully-qualified name of the
+	// GeofencingService's RecieveLocalities RPC.
+	GeofencingServiceRecieveLocalitiesProcedure = "/geofence.v1.GeofencingService/RecieveLocalities"
 )
 
 // GeofencingServiceClient is a client for the geofence.v1.GeofencingService service.
 type GeofencingServiceClient interface {
-	// Sends all detected localities to the server in one batch :contentReference[oaicite:1]{index=1}.
-	SendLocalities(context.Context, *connect.Request[v1.SendLocalitiesRequest]) (*connect.Response[v1.SendLocalitiesResponse], error)
+	// Recieve all detected localities to the server in one batch :contentReference[oaicite:1]{index=1}.
+	RecieveLocalities(context.Context, *connect.Request[v1.RecieveLocalitiesRequest]) (*connect.Response[v1.RecieveLocalitiesResponse], error)
 }
 
 // NewGeofencingServiceClient constructs a client for the geofence.v1.GeofencingService service. By
@@ -55,10 +55,10 @@ func NewGeofencingServiceClient(httpClient connect.HTTPClient, baseURL string, o
 	baseURL = strings.TrimRight(baseURL, "/")
 	geofencingServiceMethods := v1.File_geofence_v1_geofence_proto.Services().ByName("GeofencingService").Methods()
 	return &geofencingServiceClient{
-		sendLocalities: connect.NewClient[v1.SendLocalitiesRequest, v1.SendLocalitiesResponse](
+		recieveLocalities: connect.NewClient[v1.RecieveLocalitiesRequest, v1.RecieveLocalitiesResponse](
 			httpClient,
-			baseURL+GeofencingServiceSendLocalitiesProcedure,
-			connect.WithSchema(geofencingServiceMethods.ByName("SendLocalities")),
+			baseURL+GeofencingServiceRecieveLocalitiesProcedure,
+			connect.WithSchema(geofencingServiceMethods.ByName("RecieveLocalities")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -66,18 +66,18 @@ func NewGeofencingServiceClient(httpClient connect.HTTPClient, baseURL string, o
 
 // geofencingServiceClient implements GeofencingServiceClient.
 type geofencingServiceClient struct {
-	sendLocalities *connect.Client[v1.SendLocalitiesRequest, v1.SendLocalitiesResponse]
+	recieveLocalities *connect.Client[v1.RecieveLocalitiesRequest, v1.RecieveLocalitiesResponse]
 }
 
-// SendLocalities calls geofence.v1.GeofencingService.SendLocalities.
-func (c *geofencingServiceClient) SendLocalities(ctx context.Context, req *connect.Request[v1.SendLocalitiesRequest]) (*connect.Response[v1.SendLocalitiesResponse], error) {
-	return c.sendLocalities.CallUnary(ctx, req)
+// RecieveLocalities calls geofence.v1.GeofencingService.RecieveLocalities.
+func (c *geofencingServiceClient) RecieveLocalities(ctx context.Context, req *connect.Request[v1.RecieveLocalitiesRequest]) (*connect.Response[v1.RecieveLocalitiesResponse], error) {
+	return c.recieveLocalities.CallUnary(ctx, req)
 }
 
 // GeofencingServiceHandler is an implementation of the geofence.v1.GeofencingService service.
 type GeofencingServiceHandler interface {
-	// Sends all detected localities to the server in one batch :contentReference[oaicite:1]{index=1}.
-	SendLocalities(context.Context, *connect.Request[v1.SendLocalitiesRequest]) (*connect.Response[v1.SendLocalitiesResponse], error)
+	// Recieve all detected localities to the server in one batch :contentReference[oaicite:1]{index=1}.
+	RecieveLocalities(context.Context, *connect.Request[v1.RecieveLocalitiesRequest]) (*connect.Response[v1.RecieveLocalitiesResponse], error)
 }
 
 // NewGeofencingServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -87,16 +87,16 @@ type GeofencingServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewGeofencingServiceHandler(svc GeofencingServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	geofencingServiceMethods := v1.File_geofence_v1_geofence_proto.Services().ByName("GeofencingService").Methods()
-	geofencingServiceSendLocalitiesHandler := connect.NewUnaryHandler(
-		GeofencingServiceSendLocalitiesProcedure,
-		svc.SendLocalities,
-		connect.WithSchema(geofencingServiceMethods.ByName("SendLocalities")),
+	geofencingServiceRecieveLocalitiesHandler := connect.NewUnaryHandler(
+		GeofencingServiceRecieveLocalitiesProcedure,
+		svc.RecieveLocalities,
+		connect.WithSchema(geofencingServiceMethods.ByName("RecieveLocalities")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/geofence.v1.GeofencingService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case GeofencingServiceSendLocalitiesProcedure:
-			geofencingServiceSendLocalitiesHandler.ServeHTTP(w, r)
+		case GeofencingServiceRecieveLocalitiesProcedure:
+			geofencingServiceRecieveLocalitiesHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -106,6 +106,6 @@ func NewGeofencingServiceHandler(svc GeofencingServiceHandler, opts ...connect.H
 // UnimplementedGeofencingServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedGeofencingServiceHandler struct{}
 
-func (UnimplementedGeofencingServiceHandler) SendLocalities(context.Context, *connect.Request[v1.SendLocalitiesRequest]) (*connect.Response[v1.SendLocalitiesResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("geofence.v1.GeofencingService.SendLocalities is not implemented"))
+func (UnimplementedGeofencingServiceHandler) RecieveLocalities(context.Context, *connect.Request[v1.RecieveLocalitiesRequest]) (*connect.Response[v1.RecieveLocalitiesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("geofence.v1.GeofencingService.RecieveLocalities is not implemented"))
 }

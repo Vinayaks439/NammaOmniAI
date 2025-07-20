@@ -22,7 +22,7 @@ const (
 )
 
 // A request containing all localities detected within the geofence.
-type SendLocalitiesRequest struct {
+type RecieveLocalitiesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The names of the localities/sub-localities inside the geofence.
 	Localities    []string `protobuf:"bytes,1,rep,name=localities,proto3" json:"localities,omitempty"`
@@ -30,20 +30,20 @@ type SendLocalitiesRequest struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SendLocalitiesRequest) Reset() {
-	*x = SendLocalitiesRequest{}
+func (x *RecieveLocalitiesRequest) Reset() {
+	*x = RecieveLocalitiesRequest{}
 	mi := &file_geofence_v1_geofence_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SendLocalitiesRequest) String() string {
+func (x *RecieveLocalitiesRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SendLocalitiesRequest) ProtoMessage() {}
+func (*RecieveLocalitiesRequest) ProtoMessage() {}
 
-func (x *SendLocalitiesRequest) ProtoReflect() protoreflect.Message {
+func (x *RecieveLocalitiesRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_geofence_v1_geofence_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -55,12 +55,12 @@ func (x *SendLocalitiesRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SendLocalitiesRequest.ProtoReflect.Descriptor instead.
-func (*SendLocalitiesRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use RecieveLocalitiesRequest.ProtoReflect.Descriptor instead.
+func (*RecieveLocalitiesRequest) Descriptor() ([]byte, []int) {
 	return file_geofence_v1_geofence_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *SendLocalitiesRequest) GetLocalities() []string {
+func (x *RecieveLocalitiesRequest) GetLocalities() []string {
 	if x != nil {
 		return x.Localities
 	}
@@ -68,7 +68,7 @@ func (x *SendLocalitiesRequest) GetLocalities() []string {
 }
 
 // A response acknowledging receipt of the localities.
-type SendLocalitiesResponse struct {
+type RecieveLocalitiesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Whether the server successfully processed the localities.
 	Success bool `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
@@ -78,20 +78,20 @@ type SendLocalitiesResponse struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SendLocalitiesResponse) Reset() {
-	*x = SendLocalitiesResponse{}
+func (x *RecieveLocalitiesResponse) Reset() {
+	*x = RecieveLocalitiesResponse{}
 	mi := &file_geofence_v1_geofence_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SendLocalitiesResponse) String() string {
+func (x *RecieveLocalitiesResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SendLocalitiesResponse) ProtoMessage() {}
+func (*RecieveLocalitiesResponse) ProtoMessage() {}
 
-func (x *SendLocalitiesResponse) ProtoReflect() protoreflect.Message {
+func (x *RecieveLocalitiesResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_geofence_v1_geofence_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -103,19 +103,19 @@ func (x *SendLocalitiesResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SendLocalitiesResponse.ProtoReflect.Descriptor instead.
-func (*SendLocalitiesResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use RecieveLocalitiesResponse.ProtoReflect.Descriptor instead.
+func (*RecieveLocalitiesResponse) Descriptor() ([]byte, []int) {
 	return file_geofence_v1_geofence_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *SendLocalitiesResponse) GetSuccess() bool {
+func (x *RecieveLocalitiesResponse) GetSuccess() bool {
 	if x != nil {
 		return x.Success
 	}
 	return false
 }
 
-func (x *SendLocalitiesResponse) GetMessage() string {
+func (x *RecieveLocalitiesResponse) GetMessage() string {
 	if x != nil {
 		return x.Message
 	}
@@ -126,16 +126,16 @@ var File_geofence_v1_geofence_proto protoreflect.FileDescriptor
 
 const file_geofence_v1_geofence_proto_rawDesc = "" +
 	"\n" +
-	"\x1ageofence/v1/geofence.proto\x12\vgeofence.v1\"7\n" +
-	"\x15SendLocalitiesRequest\x12\x1e\n" +
+	"\x1ageofence/v1/geofence.proto\x12\vgeofence.v1\":\n" +
+	"\x18RecieveLocalitiesRequest\x12\x1e\n" +
 	"\n" +
 	"localities\x18\x01 \x03(\tR\n" +
-	"localities\"L\n" +
-	"\x16SendLocalitiesResponse\x12\x18\n" +
+	"localities\"O\n" +
+	"\x19RecieveLocalitiesResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage2n\n" +
-	"\x11GeofencingService\x12Y\n" +
-	"\x0eSendLocalities\x12\".geofence.v1.SendLocalitiesRequest\x1a#.geofence.v1.SendLocalitiesResponseB$Z\"backend/gen/geofence/v1;geofencev1b\x06proto3"
+	"\amessage\x18\x02 \x01(\tR\amessage2w\n" +
+	"\x11GeofencingService\x12b\n" +
+	"\x11RecieveLocalities\x12%.geofence.v1.RecieveLocalitiesRequest\x1a&.geofence.v1.RecieveLocalitiesResponseB$Z\"backend/gen/geofence/v1;geofencev1b\x06proto3"
 
 var (
 	file_geofence_v1_geofence_proto_rawDescOnce sync.Once
@@ -151,12 +151,12 @@ func file_geofence_v1_geofence_proto_rawDescGZIP() []byte {
 
 var file_geofence_v1_geofence_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_geofence_v1_geofence_proto_goTypes = []any{
-	(*SendLocalitiesRequest)(nil),  // 0: geofence.v1.SendLocalitiesRequest
-	(*SendLocalitiesResponse)(nil), // 1: geofence.v1.SendLocalitiesResponse
+	(*RecieveLocalitiesRequest)(nil),  // 0: geofence.v1.RecieveLocalitiesRequest
+	(*RecieveLocalitiesResponse)(nil), // 1: geofence.v1.RecieveLocalitiesResponse
 }
 var file_geofence_v1_geofence_proto_depIdxs = []int32{
-	0, // 0: geofence.v1.GeofencingService.SendLocalities:input_type -> geofence.v1.SendLocalitiesRequest
-	1, // 1: geofence.v1.GeofencingService.SendLocalities:output_type -> geofence.v1.SendLocalitiesResponse
+	0, // 0: geofence.v1.GeofencingService.RecieveLocalities:input_type -> geofence.v1.RecieveLocalitiesRequest
+	1, // 1: geofence.v1.GeofencingService.RecieveLocalities:output_type -> geofence.v1.RecieveLocalitiesResponse
 	1, // [1:2] is the sub-list for method output_type
 	0, // [0:1] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
