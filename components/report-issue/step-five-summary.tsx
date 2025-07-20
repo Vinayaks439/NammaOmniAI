@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle, MapPin, ArrowRight, Award } from "lucide-react"
 
-export default function StepFourSummary({ onSubmit }: { onSubmit: () => void }) {
+export default function StepFiveSummary({ onSubmit }: { onSubmit: () => void }) {
   return (
     <div className="w-full max-w-2xl text-center">
       <div className="mx-auto bg-green-500/20 rounded-full p-4 w-24 h-24 flex items-center justify-center mb-6 border-2 border-green-500">

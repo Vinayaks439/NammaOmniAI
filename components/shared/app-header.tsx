@@ -82,14 +82,14 @@ export function AppHeader({
             <Siren className="h-5 w-5" />
           </Button>
         )}
-        <Search className="h-5 w-5 text-gray-400 hover:text-white cursor-pointer" />
-        <div className="relative">
+        {/* <Search className="h-5 w-5 text-gray-400 hover:text-white cursor-pointer" /> */}
+        {/* <div className="relative notification-bell">
           <Bell className="h-6 w-6 text-gray-300 hover:text-white cursor-pointer" />
           <span className="absolute top-0 right-0 flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
           </span>
-        </div>
+        </div> */}
         <Button asChild className="hidden md:flex bg-blue-600 hover:bg-blue-700">
           <Link href="/report-issue">
             <Plus className="mr-2 h-4 w-4" /> Report Issue

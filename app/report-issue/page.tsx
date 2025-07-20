@@ -3,24 +3,32 @@
 import { useState } from "react"
 import { Progress } from "@/components/ui/progress"
 import StepOneCapture from "@/components/report-issue/step-one-capture"
-import StepTwoAnalyzing from "@/components/report-issue/step-two-analyzing"
-import StepThreeReview from "@/components/report-issue/step-three-review"
-import StepFourSummary from "@/components/report-issue/step-four-summary"
+import StepTwoUploadImage from "@/components/report-issue/step-two-upload-image"
+import StepThreeAnalyzing from "@/components/report-issue/step-three-analyzing"
+import StepFourReview from "@/components/report-issue/step-four-review"
+import StepFiveSummary from "@/components/report-issue/step-five-summary"
+import { useRouter } from "next/navigation"
 
 export default function ReportIssuePage() {
   const [step, setStep] = useState(1)
   const [progress, setProgress] = useState(25)
+  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
+  const router = useRouter();
+  
+  const handleSubmit = () => {
+    router.push('/dashboard');
+  }
 
   const nextStep = () => {
-    if (step < 4) {
+    if (step < 5) {
       setStep((prev) => prev + 1)
-      setProgress((prev) => prev + 25)
+      setProgress((prev) => prev + 20)
     }
   }
 
   const goToStep = (stepNumber: number) => {
     setStep(stepNumber)
-    setProgress(stepNumber * 25)
+    setProgress(stepNumber * 20)
   }
 
   return (
@@ -35,9 +43,17 @@ export default function ReportIssuePage() {
 
       <div className="flex items-center justify-center">
         {step === 1 && <StepOneCapture onNext={nextStep} />}
-        {step === 2 && <StepTwoAnalyzing onAnalysisComplete={nextStep} />}
-        {step === 3 && <StepThreeReview onNext={nextStep} />}
-        {step === 4 && <StepFourSummary onSubmit={() => alert("Report Submitted!")} />}
+        {step === 2 && (
+          <StepTwoUploadImage
+            onNext={(file: File) => {
+              setUploadedImage(file)
+              nextStep()
+            }}
+          />
+        )}
+        {step === 3 && <StepThreeAnalyzing onAnalysisComplete={nextStep} image={uploadedImage} />}
+        {step === 4 && <StepFourReview onNext={nextStep} />}
+        {step === 5 && <StepFiveSummary onSubmit={handleSubmit} />}
       </div>
     </div>
   )
