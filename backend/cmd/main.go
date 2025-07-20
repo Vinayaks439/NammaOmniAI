@@ -1,6 +1,7 @@
 package main
 
 import (
+	// … your imports …
 	"context"
 	"log"
 	"net/http"
@@ -17,75 +18,69 @@ import (
 )
 
 const (
-	gcpProjectID         = "namm-omni-dev"       // Replace with your GCP project ID.
-	pubsubSubscriptionID = "events-subscription" // Replace with your Pub/Sub subscription ID.
+	gcpProjectID         = "namm-omni-dev"
+	pubsubSubscriptionID = "energy-management-data-sub"
 )
 
-// EventsServiceServer implements the Connect interface for our streaming events API.
+func withCORS(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers",
+			"Content-Type, Accept, X-Grpc-Web, X-User-Agent, Grpc-Timeout")
+		w.Header().Set("Access-Control-Expose-Headers",
+			"Grpc-Status, Grpc-Message, Grpc-Status-Details-Bin")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
+}
+
 type EventsServiceServer struct{}
 
-// StreamEnergyManagementEvents connects to a Pub/Sub subscription and streams events to the client.
 func (s *EventsServiceServer) StreamEnergyManagementEvents(
 	ctx context.Context,
 	req *connect.Request[energymanagementeventsv1.StreamEnergyManagementEventsRequest],
 	stream *connect.ServerStream[energymanagementeventsv1.StreamEnergyManagementEventsResponse],
 ) error {
-	log.Printf("StreamEnergyManagementEvents called with filter: %q", req.Msg.Filter)
-
-	// Create a Pub/Sub client.
+	log.Printf("▶ StreamEnergyManagementEvents called with filter: %q", req.Msg.Filter)
 	client, err := pubsub.NewClient(ctx, gcpProjectID)
 	if err != nil {
-		log.Printf("Failed to create Pub/Sub client: %v", err)
 		return err
 	}
 	defer client.Close()
 
 	subscription := client.Subscription(pubsubSubscriptionID)
-
-	// Create a channel to receive messages.
 	msgCh := make(chan *pubsub.Message)
-
-	// Pull messages from Pub/Sub in a separate goroutine.
 	go func() {
-		err := subscription.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
-			select {
-			case msgCh <- msg:
-			case <-ctx.Done():
-				return
-			}
+		log.Println("🔄 subscription.Receive starting…")
+		err := subscription.Receive(ctx, func(_ context.Context, msg *pubsub.Message) {
+			log.Printf("🔔 Received Pub/Sub msg ID=%s Data=%q", msg.ID, string(msg.Data))
+			msgCh <- msg
 		})
 		if err != nil {
-			log.Printf("Error receiving messages: %v", err)
+			log.Printf("🔴 subscription.Receive error: %v", err)
 		}
 		close(msgCh)
 	}()
 
-	// Listen on the channel and stream messages to the client.
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("StreamEvents canceled by client")
 			return ctx.Err()
 		case msg, ok := <-msgCh:
 			if !ok {
-				log.Println("No more messages from Pub/Sub")
 				return nil
 			}
-
-			// Acknowledge the message.
 			msg.Ack()
-
 			resp := &energymanagementeventsv1.StreamEnergyManagementEventsResponse{
 				Id:        msg.ID,
 				Timestamp: time.Now().Unix(),
-				// For demonstration, using a fixed event type.
-				// You may wish to derive this from msg.Attributes or msg.Data.
-				// Type:    energymanagementeventsv1.EventType_EVENT_TYPE_TRAFFIC,
-				Payload: string(msg.Data),
+				Payload:   string(msg.Data),
 			}
-
 			if err := stream.Send(resp); err != nil {
-				log.Printf("Failed sending event: %v", err)
 				return err
 			}
 		}
@@ -93,26 +88,26 @@ func (s *EventsServiceServer) StreamEnergyManagementEvents(
 }
 
 func main() {
-	// Optionally override configuration from environment variables.
-	if proj := os.Getenv("GCP_PROJECT_ID"); proj != "" {
-		log.Printf("Using GCP Project ID from env: %s", proj)
+	if env := os.Getenv("GCP_PROJECT_ID"); env != "" {
+		log.Printf("Using GCP_PROJECT_ID=%s", env)
 	}
-	if sub := os.Getenv("PUBSUB_SUBSCRIPTION_ID"); sub != "" {
-		log.Printf("Using Pub/Sub Subscription ID from env: %s", sub)
+	if env := os.Getenv("PUBSUB_SUBSCRIPTION_ID"); env != "" {
+		log.Printf("Using PUBSUB_SUBSCRIPTION_ID=%s", env)
 	}
 
-	eventsServer := &EventsServiceServer{}
+	server := &EventsServiceServer{}
 	mux := http.NewServeMux()
-	path, handler := energymanagementeventsv1connect.NewEnergyManagementEventsServiceHandler(eventsServer)
+	path, handler := energymanagementeventsv1connect.
+		NewEnergyManagementEventsServiceHandler(server)
 	mux.Handle(path, handler)
 
-	addr := "localhost:8080"
-	log.Printf("Starting EventsService server on %s", addr)
-	if err := http.ListenAndServe(
-		addr,
-		// Use h2c so we can serve HTTP/2 without TLS.
-		h2c.NewHandler(mux, &http2.Server{}),
-	); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+	// single h2c wrap → then CORS
+	h2cHandler := h2c.NewHandler(mux, &http2.Server{})
+	corsHandler := withCORS(h2cHandler)
+
+	log.Printf("Serving RPC at %s", path)
+	log.Printf("Listening on localhost:8080")
+	if err := http.ListenAndServe("localhost:8080", corsHandler); err != nil {
+		log.Fatalf("Server failed: %v", err)
 	}
 }
