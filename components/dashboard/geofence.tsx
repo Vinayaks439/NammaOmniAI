@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 
 export default function Geofence() {
   const mapRef = useRef<HTMLDivElement>(null)
-  const [center, setCenter] = useState({ lat: 12.9716, lng: 77.5946 })
+  const [center, setCenter] = useState({ lat: 0, lng: 0 })
   const [radius, setRadius] = useState(5000)
   const [areas, setAreas] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
@@ -38,7 +38,7 @@ export default function Geofence() {
     // eslint-disable-next-line
     return () => { (window as any).initMap = undefined }
     // eslint-disable-next-line
-  }, [])
+  }, [center])
 
   // Expose initMap globally for Google callback
   function initMap() {
