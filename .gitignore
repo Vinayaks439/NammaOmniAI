@@ -1,3 +1,10 @@
+
+#env file
+.env.PROD
+
+#vite build file
+.vite
+
 # Next.js build output
 .next/
 out/

@@ -27,6 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import Geofence from "@/components/dashboard/geofence"
 
 // Dynamically import the map to prevent SSR issues with Leaflet
 const InteractiveMap = dynamic(() => import("@/components/dashboard/interactive-map"), {
@@ -282,7 +283,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 h-[60vh] min-h-[500px] rounded-lg overflow-hidden relative">{MapMemo}</div>
+          <div className="lg:col-span-2 h-[60vh] min-h-[500px] rounded-lg overflow-hidden relative"><Geofence /></div>
           <div className="lg:col-span-1 h-[60vh] min-h-[500px]">
             <LiveFeed items={feedItems} filter={feedFilter} setFilter={setFeedFilter} />
           </div>

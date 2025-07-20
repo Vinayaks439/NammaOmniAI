@@ -1,0 +1,253 @@
+"use client"
+
+import { useEffect, useRef, useState } from "react"
+
+export default function Geofence() {
+  const mapRef = useRef<HTMLDivElement>(null)
+  const [center, setCenter] = useState({ lat: 12.9716, lng: 77.5946 })
+  const [radius, setRadius] = useState(5000)
+  const [areas, setAreas] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const rectRef = useRef<any>(null)
+  const geocoderRef = useRef<any>(null)
+  const mapInstanceRef = useRef<any>(null)
+
+  // Helper functions
+  function metersToLat(m: number) { return m / 111320 }
+  function metersToLng(m: number, lat: number) { return m / (111320 * Math.cos(lat * Math.PI/180)) }
+
+  // Load Google Maps JS API
+  useEffect(() => {
+    if (!(window as any).google) {
+      const script = document.createElement("script")
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&callback=initMap`
+      script.async = true
+      if (document.body) {
+        document.body.appendChild(script)
+      }
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((position) => {
+          setCenter({ lat: position.coords.latitude, lng: position.coords.longitude })
+        })
+      }
+      (window as any).initMap = initMap
+    } else {
+      initMap()
+    }
+    // eslint-disable-next-line
+    return () => { (window as any).initMap = undefined }
+    // eslint-disable-next-line
+  }, [])
+
+  // Expose initMap globally for Google callback
+  function initMap() {
+    const map = new (window as any).google.maps.Map(mapRef.current, {
+      center, zoom: 13,
+      styles: [
+        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+        {
+          featureType: "administrative.locality",
+          elementType: "labels.text.fill",
+          stylers: [{ color: "#d59563" }],
+        },
+        {
+          featureType: "poi",
+          elementType: "labels.text.fill",
+          stylers: [{ color: "#d59563" }],
+        },
+        {
+          featureType: "poi.park",
+          elementType: "geometry",
+          stylers: [{ color: "#263c3f" }],
+        },
+        {
+          featureType: "poi.park",
+          elementType: "labels.text.fill",
+          stylers: [{ color: "#6b9a76" }],
+        },
+        {
+          featureType: "road",
+          elementType: "geometry",
+          stylers: [{ color: "#38414e" }],
+        },
+        {
+          featureType: "road",
+          elementType: "geometry.stroke",
+          stylers: [{ color: "#212a37" }],
+        },
+        {
+          featureType: "road",
+          elementType: "labels.text.fill",
+          stylers: [{ color: "#9ca5b3" }],
+        },
+        {
+          featureType: "road.highway",
+          elementType: "geometry",
+          stylers: [{ color: "#746855" }],
+        },
+        {
+          featureType: "road.highway",
+          elementType: "geometry.stroke",
+          stylers: [{ color: "#1f2835" }],
+        },
+        {
+          featureType: "road.highway",
+          elementType: "labels.text.fill",
+          stylers: [{ color: "#f3d19c" }],
+        },
+        {
+          featureType: "transit",
+          elementType: "geometry",
+          stylers: [{ color: "#2f3948" }],
+        },
+        {
+          featureType: "transit.station",
+          elementType: "labels.text.fill",
+          stylers: [{ color: "#d59563" }],
+        },
+        {
+          featureType: "water",
+          elementType: "geometry",
+          stylers: [{ color: "#17263c" }],
+        },
+        {
+          featureType: "water",
+          elementType: "labels.text.fill",
+          stylers: [{ color: "#515c6d" }],
+        },
+        {
+          featureType: "water",
+          elementType: "labels.text.stroke",
+          stylers: [{ color: "#17263c" }],
+        },
+      ],
+    })
+    const trafficLayer = new (window as any).google.maps.TrafficLayer();
+    trafficLayer.setMap(map);
+    mapInstanceRef.current = map
+    geocoderRef.current = new (window as any).google.maps.Geocoder()
+    // Draggable, editable square
+    const dLat = metersToLat(radius), dLng = metersToLng(radius, center.lat)
+    const rect = new (window as any).google.maps.Rectangle({
+      map, draggable: true, editable: true,
+      bounds: {
+        north: center.lat + dLat,
+        south: center.lat - dLat,
+        east:  center.lng + dLng,
+        west:  center.lng - dLng
+      },
+      fillColor: '#FF0000', fillOpacity: 0.2,
+      strokeColor: '#FF0000', strokeWeight: 2
+    })
+    rectRef.current = rect
+  }
+
+  // Update rectangle when radius changes
+  useEffect(() => {
+    if (!rectRef.current || !mapInstanceRef.current) return
+    const rect = rectRef.current
+    const map = mapInstanceRef.current
+    const bounds = rect.getBounds()
+    const c = bounds.getCenter()
+    const dLat = metersToLat(radius), dLng = metersToLng(radius, c.lat())
+    rect.setBounds({
+      north: c.lat() + dLat,
+      south: c.lat() - dLat,
+      east:  c.lng() + dLng,
+      west:  c.lng() - dLng
+    })
+    // Optionally, fit map to rectangle
+    // map.fitBounds(rect.getBounds())
+    // eslint-disable-next-line
+  }, [radius])
+
+  // Promisified reverse-geocode at a point
+  function geocodePt(latlng: {lat: number, lng: number}) {
+    return new Promise<any[]>((resolve, reject) => {
+      geocoderRef.current.geocode({ location: latlng }, (results: any, status: string) => {
+        if (status === 'OK') resolve(results)
+        else if (status === 'ZERO_RESULTS') resolve([])
+        else reject(status)
+      })
+    })
+  }
+
+  // Fetch areas in rectangle
+  async function fetchAreas() {
+    if (!rectRef.current) return
+    setLoading(true)
+    setError(null)
+    setAreas([])
+    try {
+      const bounds = rectRef.current.getBounds()
+      const sw = bounds.getSouthWest().toJSON()
+      const ne = bounds.getNorthEast().toJSON()
+      const rows = 5, cols = 5
+      const latStep = (ne.lat - sw.lat)/(rows-1)
+      const lngStep = (ne.lng - sw.lng)/(cols-1)
+      const names = new Set<string>(), promises = []
+      for (let i=0; i<rows; i++) {
+        for (let j=0; j<cols; j++) {
+          const lat = sw.lat + latStep*i
+          const lng = sw.lng + lngStep*j
+          promises.push(
+            geocodePt({lat,lng})
+              .then(results => {
+                results.forEach((r: any) => {
+                  r.address_components.forEach((ac: any) => {
+                    if (ac.types.includes('locality') || ac.types.includes('sublocality')) {
+                      names.add(ac.long_name)
+                    }
+                  })
+                })
+              })
+          )
+        }
+      }
+      await Promise.all(promises)
+      setAreas(Array.from(names))
+      if (!names.size) setError('No areas found in this box')
+    } catch (err: any) {
+      setError('Geocoder error: ' + err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="relative w-full h-[600px]">
+      <div ref={mapRef} className="w-full h-full" />
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white p-4 shadow-lg z-10 rounded flex items-center gap-4">
+        <label className="flex items-center gap-2 text-black">
+          Radius (km):
+          <input
+            type="range"
+            min={5}
+            max={50}
+            step={1}
+            value={Number(radius)/1000}
+            onChange={e => setRadius(Number(e.target.value) * 1000)}
+          />
+          <span>{Number(radius)/1000}</span>
+        </label>
+        <button
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          onClick={fetchAreas}
+          disabled={loading}
+        >
+          {loading ? 'Fetching...' : 'Fetch Areas'}
+        </button>
+      </div>
+      <ul className="absolute bottom-0 left-0 right-0 max-h-40 overflow-y-auto bg-white/90 list-none m-0 p-2 z-10">
+        {error && <li className="text-red-500">{error}</li>}
+        {!error && areas.length === 0 && !loading && <li className="text-gray-400">No areas found yet</li>}
+        {areas.map(area => (
+          <li key={area} className="border-b border-gray-200 py-1 text-gray-800">{area}</li>
+        ))}
+      </ul>
+    </div>
+  )
+} 

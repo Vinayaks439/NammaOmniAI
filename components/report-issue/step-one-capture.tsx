@@ -15,11 +15,11 @@ export default function StepOneCapture({ onNext }: { onNext: () => void }) {
       </CardHeader>
       <CardContent>
         <p className="text-gray-400 mb-6">
-          Take a photo of the problem you want to report. Our AI will automatically analyze and categorize it.
+          Take a photo of the problem you want to report and upload it. Our AI will automatically analyze and categorize it.
         </p>
         <Button onClick={onNext} size="lg" className="w-full bg-blue-600 hover:bg-blue-700">
           <Camera className="mr-2 h-5 w-5" />
-          Open Camera
+          Continue
         </Button>
       </CardContent>
     </Card>

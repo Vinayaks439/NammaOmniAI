@@ -4,7 +4,7 @@ import { useEffect } from "react"
 import { Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-export default function StepTwoAnalyzing({ onAnalysisComplete }: { onAnalysisComplete: () => void }) {
+export default function StepThreeAnalyzing({ onAnalysisComplete, image }: { onAnalysisComplete: () => void, image?: File | null }) {
   useEffect(() => {
     const timer = setTimeout(() => {
       onAnalysisComplete()

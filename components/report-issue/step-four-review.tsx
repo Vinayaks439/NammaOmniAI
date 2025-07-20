@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowRight, MapPin, AlertTriangle, TrafficCone, Wrench, Zap } from "lucide-react"
 
-export default function StepThreeReview({ onNext }: { onNext: () => void }) {
+export default function StepFourReview({ onNext }: { onNext: () => void }) {
   return (
     <div className="w-full max-w-4xl space-y-6">
       <h2 className="text-2xl font-bold text-center">Review AI Analysis</h2>
