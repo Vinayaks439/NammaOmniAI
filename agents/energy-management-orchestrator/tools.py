@@ -4,7 +4,7 @@ tools.py – always-grounded Gemini helper. Settings come from agent_config.json
 
 from __future__ import annotations
 
-import json, logging, os, re
+import json, logging, re
 from functools import cached_property
 from pathlib import Path
 from typing import Any, Dict, List
