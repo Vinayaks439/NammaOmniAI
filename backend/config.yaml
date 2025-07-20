@@ -1,0 +1,4 @@
+prompt: "Summarise the following data in one sentence:"
+model: "gemini-2.5-pro"
+pubsub_subscription_ids:
+  - energy-management-data-sub
