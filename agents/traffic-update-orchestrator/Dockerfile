@@ -15,6 +15,7 @@ COPY --from=builder /install/package /usr/local/lib/python3.11/site-packages
 
 # Copy all application code into the container
 COPY . .
-
+ENV PYTHONUNBUFFERED=1 \
+    GOOGLE_API_KEY=""
 # Set the command to run the orchestrator agent
-CMD ["python", "orca.py"]
+CMD ["python", "traffic_coordinator.py"]
