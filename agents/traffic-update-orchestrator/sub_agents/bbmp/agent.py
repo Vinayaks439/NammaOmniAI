@@ -10,7 +10,7 @@ MODEL = "gemini-2.5-pro"
 bbmp_agent = Agent(
     model=MODEL,
     name="bbmp_agent",
-    instruction=bbmp_prompt.BBMP_PROMPT+"What will be the traffic update in silk board at 4pm",
+    instruction=bbmp_prompt.BBMP_PROMPT,
     output_key="bbmp_updates",
     tools=[google_search],          # ← switched to Google Search
 )

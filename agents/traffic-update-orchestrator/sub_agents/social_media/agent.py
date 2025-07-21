@@ -10,7 +10,7 @@ MODEL = "gemini-2.5-pro"
 social_media_agent = Agent(
     model=MODEL,
     name="social_media_agent",
-    instruction=social_media_prompt.SOCIAL_MEDIA_PROMPT+"What will be the traffic update in silk board at 4pm",
+    instruction=social_media_prompt.SOCIAL_MEDIA_PROMPT,
     output_key="social_media_updates",
     tools=[google_search],          # ← primary discovery tool
 )

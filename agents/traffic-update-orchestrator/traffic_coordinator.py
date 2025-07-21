@@ -13,11 +13,12 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types  # for Content / Part
 
-from .sub_agents.bbmp.agent import bbmp_agent
-from .sub_agents.btp.agent import btp_agent
-from .sub_agents.social_media.agent import social_media_agent
-from .sub_agents.weather.agent import weather_agent
-from . import prompt
+from sub_agents.bbmp.agent import bbmp_agent
+from sub_agents.btp.agent import btp_agent
+from sub_agents.social_media.agent import social_media_agent
+from sub_agents.weather.agent import weather_agent
+import prompt
+from pubsub import publish_messages,recieve_messages  # for publish_messages
 
 MODEL = "gemini-2.5-pro"
 
@@ -33,15 +34,24 @@ class WeatherEntry(BaseModel):
     wind: Any
 
 class TrafficDigestOutput(BaseModel):
-    bengaluru_traffic_digest: list[str]
-    location_weather: list[str]  # <— just raw strings
+    bengaluru_traffic_digest: Any = Field(
+        timestamp=str,
+        location=str,
+        summary=str,
+        severity_reason=str,
+        delay=str,
+        advice=str,
+    )
+    location_weather: Any = Field(
+        weather_summary=WeatherEntry
+    )  # <— just raw strings
 
     @field_validator("location_weather", mode="after")
     @classmethod
-    def strip_brackets(cls, items: list[str]) -> list[str]:
-        # remove any extraneous “[12, 17]” markers, etc.
-        return [re.sub(r"\s*\[\d+,\s*\d+\]", "", txt) for txt in items]
-
+    def validate_location_weather(cls, v):
+        if isinstance(v, dict):
+            return json.dumps(v)
+        return str(v)
 # Coordinator agent definition
 traffic_coordinator = LlmAgent(
     name="traffic_coordinator",
@@ -94,30 +104,30 @@ async def _run_and_clean(user_input: str) -> TrafficDigestOutput:
 
     if raw_response is None:
         raise RuntimeError("Agent did not emit a final response")
-    print("==Raw resp==")
-    print(raw_response)
     # 4) Extract JSON payload
+
+    payload = re.sub(r"^```json\n|```", "", raw_response, flags=re.DOTALL)
+    
     try:
-        payload = json.loads(raw_response)
+        payload = json.loads(payload)
     except json.JSONDecodeError:
-        m = re.search(r"(\{.*\})", raw_response, re.DOTALL)
-        if not m:
-            raise ValueError("No JSON found in agent output")
-        payload = json.loads(m.group(1))
+        raise ValueError(f"Invalid JSON payload: {payload}")
+    
+    return TrafficDigestOutput.model_validate(payload,strict=False)
 
     # — Coerce any dict entries in location_weather into JSON strings —
-    if "location_weather" in payload:
-        coerced = []
-        for entry in payload["location_weather"]:
-            if isinstance(entry, dict):
-                # turn dict into a compact JSON string
-                coerced.append(json.dumps(entry, separators=(",", ":")))
-            else:
-                coerced.append(str(entry))
-        payload["location_weather"] = coerced
+    # if "location_weather" in payload:
+    #     coerced = []
+    #     for entry in payload["location_weather"]:
+    #         if isinstance(entry, dict):
+    #             # turn dict into a compact JSON string
+    #             coerced.append(json.dumps(entry, separators=(",", ":")))
+    #         else:
+    #             coerced.append(str(entry))
+    #     payload["location_weather"] = coerced
 
-    # 5) Validate and return the structured output
-    return TrafficDigestOutput.parse_obj(payload)
+    # # 5) Validate and return the structured output
+    # return TrafficDigestOutput.parse_obj(payload)
 
 
 
@@ -125,12 +135,7 @@ def get_traffic_digest(user_input: str = "City wide summary") -> TrafficDigestOu
     return asyncio.run(_run_and_clean(user_input))
 
 if __name__ == "__main__":
-    digest = get_traffic_digest("City wide summary")
-    print("Traffic Updates:")
-    for line in digest.bengaluru_traffic_digest:
-        print("  ", line)
-
-    print("\nWeather Data:")
-    for weather_str in digest.location_weather:
-        # each entry is just the raw string returned by the model
-        print("  ", weather_str)
+    message = recieve_messages(lambda e: print(f"Error receiving message: {e}"))
+    digest = get_traffic_digest(message)
+    response = json.dumps(digest.model_dump(), indent=2)
+    publish_messages(response, lambda e: print(f"Error publishing message: {e}"))

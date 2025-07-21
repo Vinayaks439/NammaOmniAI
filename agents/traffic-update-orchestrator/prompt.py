@@ -47,13 +47,27 @@ Workflow:
    • Emit exactly one JSON object with two arrays:
 
 {
-  "bengaluru_traffic_digest": [
-    "21:00 IST – Silk Board Junction: Heavy congestion due to ... (Moderate; multi-source) – Delay: 20 min – Advice: Use service road"
+  "bengaluru_traffic_digest": [ {
+    "timestamp" : "21:00 IST",
+    "location" : "Silk Board Junction",
+    "summary" : "Heavy congestion due to ongoing construction work",
+    "severity_reason" : "Moderate; multi-source",
+    "delay" : "20 min",
+    "advice" : "Use service road"
+  }, 
     // ...
   ],
-  "location_weather": [
-    "Hebbal: clear skies, 28 °C, wind 5 km/h",
-    "MG Road: light rain, 23 °C, wind 10 km/h"
+  "location_weather": [ {
+    "weather_summary" : {
+      "location" : "Koramangala",
+      "temperature" : "28 °C",
+      "conditions" : "Clear skies",
+      "precipitation" : "0%",
+      "wind" : "Lightwind 5 km/h"
+      }
+     ],
+    // ... 
+  },
     // ...
   ]
 }
