@@ -131,7 +131,7 @@ async def _run_and_clean(user_input: str) -> TrafficDigestOutput:
 
 
 
-def get_traffic_digest(user_input: str = "City wide summary") -> TrafficDigestOutput:
+def get_traffic_digest(user_input: str) -> TrafficDigestOutput:
     return asyncio.run(_run_and_clean(user_input))
 
 if __name__ == "__main__":
