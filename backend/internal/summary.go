@@ -27,11 +27,11 @@ import (
 // Call NewSummarizer and then Run.
 
 type Summarizer struct {
-	projectID       string
-	subscriptionIDs []string
-	modelID         string
-	sink            func(summary string) error
-	prompt          string
+	projectID      string
+	subscriptionID string
+	modelID        string
+	sink           func(summary string) error
+	prompt         string
 	// internal state
 	client      *pubsub.Client
 	genaiClient *genai.Client
@@ -39,16 +39,16 @@ type Summarizer struct {
 
 // NewSummarizer constructs a Summarizer. The callback is mandatory. The modelID
 // may be empty, in which case "gemini-2.5-pro" is used.
-func NewSummarizer(projectID string, subscriptionIDs []string, modelID string, prompt string, sink func(string) error) *Summarizer {
+func NewSummarizer(projectID string, subscriptionID string, modelID string, prompt string, sink func(string) error) *Summarizer {
 	if modelID == "" {
 		modelID = "gemini-2.5-flash"
 	}
 	return &Summarizer{
-		projectID:       projectID,
-		subscriptionIDs: subscriptionIDs,
-		modelID:         modelID,
-		prompt:          prompt,
-		sink:            sink,
+		projectID:      projectID,
+		subscriptionID: subscriptionID,
+		modelID:        modelID,
+		prompt:         prompt,
+		sink:           sink,
 	}
 }
 
@@ -86,23 +86,21 @@ func (s *Summarizer) Run(ctx context.Context) error {
 	var recvWG sync.WaitGroup
 
 	// launch a receiver goroutine per subscription
-	for _, subID := range s.subscriptionIDs {
-		sub := client.Subscription(subID)
-		recvWG.Add(1)
-		go func(sb *pubsub.Subscription) {
-			defer recvWG.Done()
-			err := sb.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
-				select {
-				case msgCh <- m:
-				case <-ctx.Done():
-					m.Nack()
-				}
-			})
-			if err != nil {
-				log.Printf("subscription %s terminated: %v", sb.ID(), err)
+	sub := client.Subscription(s.subscriptionID)
+	recvWG.Add(1)
+	go func(sb *pubsub.Subscription) {
+		defer recvWG.Done()
+		err := sb.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
+			select {
+			case msgCh <- m:
+			case <-ctx.Done():
+				m.Nack()
 			}
-		}(sub)
-	}
+		})
+		if err != nil {
+			log.Printf("subscription %s terminated: %v", sb.ID(), err)
+		}
+	}(sub)
 
 	// close msgCh once all Receive loops have returned
 	go func() {
@@ -143,7 +141,6 @@ func (s *Summarizer) handleMessage(ctx context.Context, m *pubsub.Message) error
 		return fmt.Errorf("gemini generate: %w", err)
 	}
 	latency := time.Since(start)
-
 	summary := resp.Text()
 	log.Printf("📝 generated summary (%.1f ms): %s", float64(latency.Milliseconds()), summary)
 

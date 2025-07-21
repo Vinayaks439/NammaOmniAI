@@ -15,6 +15,8 @@ import (
 
 	"backend/config"
 	"backend/internal"
+
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -40,19 +42,86 @@ func withCORS(h http.Handler) http.Handler {
 // SummaryService implementation
 type summaryServer struct{}
 
-func (s *summaryServer) StreamSummary(ctx context.Context, req *connect.Request[summaryv1.StreamSummaryRequest], stream *connect.ServerStream[summaryv1.StreamSummaryResponse]) error {
-	log.Printf("▶ StreamSummary lat=%f long=%f areas=%v", req.Msg.GetLat(), req.Msg.GetLong(), req.Msg.GetAreas())
+func (s *summaryServer) StreamSummary(
+	ctx context.Context,
+	req *connect.Request[summaryv1.StreamSummaryRequest],
+	stream *connect.ServerStream[summaryv1.StreamSummaryResponse],
+) error {
 
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("config load error: %v", err)
+		return err
 	}
-	print(cfg)
 
-	summarizer := internal.NewSummarizer(gcpProjectID, cfg.PubsubSubscriptionIds, cfg.Model, cfg.Prompt, func(text string) error {
-		return stream.Send(&summaryv1.StreamSummaryResponse{Summary: text})
+	log.Printf("StreamSummary request: %v, %v, %v", req.Msg.Areas, req.Msg.Lat, req.Msg.Long)
+
+	// Channel fan-in
+	outCh := make(chan *summaryv1.StreamSummaryResponse)
+
+	g, ctx := errgroup.WithContext(ctx)
+
+	// ---- ENERGY summarizer ----
+	g.Go(func() error {
+		summ := internal.NewSummarizer(
+			gcpProjectID,
+			"energy-management-data-sub",
+			cfg.Model,
+			cfg.Prompt,
+			func(text string) error {
+				select {
+				case outCh <- &summaryv1.StreamSummaryResponse{
+					EnergyManagmentSummary: text,
+				}:
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			},
+		)
+		return summ.Run(ctx)
 	})
-	return summarizer.Run(ctx)
+
+	// ---- TRAFFIC summarizer ----
+	g.Go(func() error {
+		summ := internal.NewSummarizer(
+			gcpProjectID,
+			"traffic-update-data-sub",
+			cfg.Model,
+			cfg.Prompt,
+			func(text string) error {
+				select {
+				case outCh <- &summaryv1.StreamSummaryResponse{
+					TrafficUpdateSummary: text,
+				}:
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			},
+		)
+		return summ.Run(ctx)
+	})
+
+	// ---- Forwarder (single writer to stream) ----
+	g.Go(func() error {
+		defer close(outCh)
+		for {
+			select {
+			case resp := <-outCh:
+				if resp == nil {
+					return nil
+				}
+				if err := stream.Send(resp); err != nil {
+					return err
+				}
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+	})
+
+	// Wait for any goroutine to error or for ctx cancel.
+	return g.Wait()
 }
 
 func main() {

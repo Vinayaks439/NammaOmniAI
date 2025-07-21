@@ -7,6 +7,7 @@ require (
 	connectrpc.com/connect v1.18.1
 	github.com/spf13/viper v1.18.2
 	golang.org/x/net v0.42.0
+	golang.org/x/sync v0.16.0
 	google.golang.org/genai v1.16.0
 	google.golang.org/protobuf v1.36.6
 )
@@ -50,7 +51,6 @@ require (
 	golang.org/x/crypto v0.40.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/oauth2 v0.28.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
