@@ -41,7 +41,7 @@ type Summarizer struct {
 // may be empty, in which case "gemini-2.5-pro" is used.
 func NewSummarizer(projectID string, subscriptionIDs []string, modelID string, prompt string, sink func(string) error) *Summarizer {
 	if modelID == "" {
-		modelID = "gemini-2.5-pro"
+		modelID = "gemini-2.5-flash"
 	}
 	return &Summarizer{
 		projectID:       projectID,
@@ -65,11 +65,11 @@ func (s *Summarizer) Run(ctx context.Context) error {
 	s.client = client
 
 	// ---------- init Gemini ----------
-	// We rely on the GOOGLE_API_KEY env var for authentication. Fail early if it
+	// We rely on the GEMINI_API_KEY env var for authentication. Fail early if it
 	// is not set so the caller gets a clear error instead of mysterious 403s.
-	apiKey := os.Getenv("GOOGLE_API_KEY")
+	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
-		return fmt.Errorf("GOOGLE_API_KEY environment variable must be set for Gemini access")
+		return fmt.Errorf("GEMINI_API_KEY environment variable must be set for Gemini access")
 	}
 
 	genClient, err := genai.NewClient(ctx, &genai.ClientConfig{
@@ -133,7 +133,7 @@ func (s *Summarizer) Run(ctx context.Context) error {
 
 func (s *Summarizer) handleMessage(ctx context.Context, m *pubsub.Message) error {
 	raw := string(m.Data)
-
+	print(raw)
 	prompt := s.prompt + "\n\n" + raw
 
 	start := time.Now()

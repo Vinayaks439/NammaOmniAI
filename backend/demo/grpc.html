@@ -17,10 +17,10 @@
 
   <script>
   (function(){
-    const endpoint = 'http://localhost:8080/energymanagementevents.v1.EnergyManagementEventsService/StreamEnergyManagementEvents';
+    const endpoint = 'http://localhost:8080/summary.v1.SummaryService/StreamSummary';
 
     // 1) Build a Connect-JSON request envelope:
-    const reqObj = { filter: "ALL" };
+    const reqObj = { lat: 12.919230, long : 77.539974, areas : ["AGS Layout", "Arehalli","Hoskerehalli"] };
     const encoder = new TextEncoder();
     const jsonBytes = encoder.encode(JSON.stringify(reqObj));
     const header = new Uint8Array(5);
