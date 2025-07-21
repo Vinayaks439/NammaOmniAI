@@ -61,13 +61,20 @@ func (s *summaryServer) StreamSummary(
 	g, ctx := errgroup.WithContext(ctx)
 
 	// ---- ENERGY summarizer ----
+	energyCh, cancelEnergy, err := internal.Subscribe(context.Background(), gcpProjectID, "energy-management-data-sub")
+	if err != nil {
+		return err
+	}
 	g.Go(func() error {
+		defer cancelEnergy()
 		summ := internal.NewSummarizer(
-			gcpProjectID,
-			"energy-management-data-sub",
+			energyCh,
 			cfg.Model,
 			cfg.Prompt,
 			func(text string) error {
+				log.Printf("ENERGY out: %+v", &summaryv1.StreamSummaryResponse{
+					EnergyManagmentSummary: text,
+				})
 				select {
 				case outCh <- &summaryv1.StreamSummaryResponse{
 					EnergyManagmentSummary: text,
@@ -82,10 +89,14 @@ func (s *summaryServer) StreamSummary(
 	})
 
 	// ---- TRAFFIC summarizer ----
+	trafficCh, cancelTraffic, err := internal.Subscribe(context.Background(), gcpProjectID, "traffic-update-data-sub")
+	if err != nil {
+		return err
+	}
 	g.Go(func() error {
+		defer cancelTraffic()
 		summ := internal.NewSummarizer(
-			gcpProjectID,
-			"traffic-update-data-sub",
+			trafficCh,
 			cfg.Model,
 			cfg.Prompt,
 			func(text string) error {

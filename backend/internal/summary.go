@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
 	"time"
 
-	"cloud.google.com/go/pubsub"
 	genai "google.golang.org/genai"
 )
 
@@ -27,28 +25,25 @@ import (
 // Call NewSummarizer and then Run.
 
 type Summarizer struct {
-	projectID      string
-	subscriptionID string
-	modelID        string
-	sink           func(summary string) error
-	prompt         string
+	msgCh   <-chan string
+	modelID string
+	sink    func(summary string) error
+	prompt  string
 	// internal state
-	client      *pubsub.Client
 	genaiClient *genai.Client
 }
 
 // NewSummarizer constructs a Summarizer. The callback is mandatory. The modelID
 // may be empty, in which case "gemini-2.5-pro" is used.
-func NewSummarizer(projectID string, subscriptionID string, modelID string, prompt string, sink func(string) error) *Summarizer {
+func NewSummarizer(msgCh <-chan string, modelID string, prompt string, sink func(string) error) *Summarizer {
 	if modelID == "" {
 		modelID = "gemini-2.5-flash"
 	}
 	return &Summarizer{
-		projectID:      projectID,
-		subscriptionID: subscriptionID,
-		modelID:        modelID,
-		prompt:         prompt,
-		sink:           sink,
+		msgCh:   msgCh,
+		modelID: modelID,
+		prompt:  prompt,
+		sink:    sink,
 	}
 }
 
@@ -56,14 +51,6 @@ func NewSummarizer(projectID string, subscriptionID string, modelID string, prom
 // produced by the sink or by Gemini immediately stops the pipeline and is
 // returned to the caller.
 func (s *Summarizer) Run(ctx context.Context) error {
-	// ---------- init Pub/Sub client ----------
-	client, err := pubsub.NewClient(ctx, s.projectID)
-	if err != nil {
-		return fmt.Errorf("create pubsub client: %w", err)
-	}
-	defer client.Close()
-	s.client = client
-
 	// ---------- init Gemini ----------
 	// We rely on the GEMINI_API_KEY env var for authentication. Fail early if it
 	// is not set so the caller gets a clear error instead of mysterious 403s.
@@ -81,57 +68,25 @@ func (s *Summarizer) Run(ctx context.Context) error {
 	}
 	s.genaiClient = genClient
 
-	// ---------- fan-in all subscriptions ----------
-	msgCh := make(chan *pubsub.Message)
-	var recvWG sync.WaitGroup
-
-	// launch a receiver goroutine per subscription
-	sub := client.Subscription(s.subscriptionID)
-	recvWG.Add(1)
-	go func(sb *pubsub.Subscription) {
-		defer recvWG.Done()
-		err := sb.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
-			select {
-			case msgCh <- m:
-			case <-ctx.Done():
-				m.Nack()
-			}
-		})
-		if err != nil {
-			log.Printf("subscription %s terminated: %v", sb.ID(), err)
-		}
-	}(sub)
-
-	// close msgCh once all Receive loops have returned
-	go func() {
-		recvWG.Wait()
-		close(msgCh)
-	}()
-
 	// ---------- processing loop ----------
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case m, ok := <-msgCh:
+		case raw, ok := <-s.msgCh:
 			if !ok {
 				return nil // normal shutdown, all subscriptions closed
 			}
 
 			// summarise and forward (blocking)
-			if err := s.handleMessage(ctx, m); err != nil {
-				// On sink or gemini error we stop processing. Nack so the message can be retried.
-				m.Nack()
+			if err := s.handleMessage(ctx, raw); err != nil {
 				return err
 			}
-			m.Ack()
 		}
 	}
 }
 
-func (s *Summarizer) handleMessage(ctx context.Context, m *pubsub.Message) error {
-	raw := string(m.Data)
-	print(raw)
+func (s *Summarizer) handleMessage(ctx context.Context, raw string) error {
 	prompt := s.prompt + "\n\n" + raw
 
 	start := time.Now()
