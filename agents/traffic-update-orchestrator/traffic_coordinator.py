@@ -11,7 +11,7 @@ from google.adk.agents import LlmAgent
 from google.adk.tools.agent_tool import AgentTool
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
-from google.genai import types  # for Content / Part
+from google.genai import types , errors # for Content / Part
 
 from sub_agents.bbmp.agent import bbmp_agent
 from sub_agents.btp.agent import btp_agent
@@ -107,7 +107,7 @@ async def _run_and_clean(user_input: str) -> TrafficDigestOutput:
     # 4) Extract JSON payload
 
     payload = re.sub(r"^```json\n|```", "", raw_response, flags=re.DOTALL)
-    
+    print(f" response: {payload}")
     try:
         payload = json.loads(payload)
     except json.JSONDecodeError:
@@ -136,6 +136,7 @@ def get_traffic_digest(user_input: str) -> TrafficDigestOutput:
 
 if __name__ == "__main__":
     message = recieve_messages(lambda e: print(f"Error receiving message: {e}"))
+    #digest = get_traffic_digest("Provide a traffic update near [PES Colleage,Banashankari 3rd stage,Silk Board, Koramangala, MG Road, Hebbal Flyover] at 6pm IST 21st June including all data from BBMP, BTP, social media, and weather.")
     digest = get_traffic_digest(message)
     response = json.dumps(digest.model_dump(), indent=2)
     publish_messages(response, lambda e: print(f"Error publishing message: {e}"))

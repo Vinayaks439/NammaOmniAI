@@ -6,7 +6,7 @@ from concurrent.futures import TimeoutError
 
 project_id = "namm-omni-dev"
 topic_id = "traffic-update-data"
-subscription_id = "traffic-update-subscription"
+subscription_id = "trigger-traffic-update-agent-sub"
 timeout = 500
 
 publisher = pubsub_v1.PublisherClient()
