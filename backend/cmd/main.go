@@ -5,25 +5,22 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 
-	"cloud.google.com/go/pubsub"
 	"connectrpc.com/connect"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
-	energymanagementeventsv1 "backend/gen/energymanagementevents/v1"
-	energymanagementeventsv1connect "backend/gen/energymanagementevents/v1/energymanagementeventsv1connect"
 	summaryv1 "backend/gen/summary/v1"
 	summaryv1connect "backend/gen/summary/v1/summaryv1connect"
 
 	"backend/config"
 	"backend/internal"
+
+	"golang.org/x/sync/errgroup"
 )
 
 const (
-	gcpProjectID         = "namm-omni-dev"
-	pubsubSubscriptionID = "energy-management-data-sub"
+	gcpProjectID = "namm-omni-dev"
 )
 
 func withCORS(h http.Handler) http.Handler {
@@ -42,70 +39,89 @@ func withCORS(h http.Handler) http.Handler {
 	})
 }
 
-type EventsServiceServer struct{}
-
-func (s *EventsServiceServer) StreamEnergyManagementEvents(
-	ctx context.Context,
-	req *connect.Request[energymanagementeventsv1.StreamEnergyManagementEventsRequest],
-	stream *connect.ServerStream[energymanagementeventsv1.StreamEnergyManagementEventsResponse],
-) error {
-	log.Printf("▶ StreamEnergyManagementEvents called with filter: %q", req.Msg.Filter)
-	client, err := pubsub.NewClient(ctx, gcpProjectID)
-	if err != nil {
-		return err
-	}
-	defer client.Close()
-
-	subscription := client.Subscription(pubsubSubscriptionID)
-	msgCh := make(chan *pubsub.Message)
-	go func() {
-		log.Println("🔄 subscription.Receive starting…")
-		err := subscription.Receive(ctx, func(_ context.Context, msg *pubsub.Message) {
-			log.Printf("🔔 Received Pub/Sub msg ID=%s Data=%q", msg.ID, string(msg.Data))
-			msgCh <- msg
-		})
-		if err != nil {
-			log.Printf("🔴 subscription.Receive error: %v", err)
-		}
-		close(msgCh)
-	}()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case msg, ok := <-msgCh:
-			if !ok {
-				return nil
-			}
-			msg.Ack()
-			resp := &energymanagementeventsv1.StreamEnergyManagementEventsResponse{
-				Id:        msg.ID,
-				Timestamp: time.Now().Unix(),
-				Payload:   string(msg.Data),
-			}
-			if err := stream.Send(resp); err != nil {
-				return err
-			}
-		}
-	}
-}
-
 // SummaryService implementation
 type summaryServer struct{}
 
-func (s *summaryServer) StreamSummary(ctx context.Context, req *connect.Request[summaryv1.StreamSummaryRequest], stream *connect.ServerStream[summaryv1.StreamSummaryResponse]) error {
-	log.Printf("▶ StreamSummary lat=%f long=%f areas=%v", req.Msg.GetLat(), req.Msg.GetLong(), req.Msg.GetAreas())
+func (s *summaryServer) StreamSummary(
+	ctx context.Context,
+	req *connect.Request[summaryv1.StreamSummaryRequest],
+	stream *connect.ServerStream[summaryv1.StreamSummaryResponse],
+) error {
 
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("config load error: %v", err)
+		return err
 	}
 
-	summarizer := internal.NewSummarizer(gcpProjectID, cfg.PubsubSubscriptionIds, cfg.Model, cfg.Prompt, func(text string) error {
-		return stream.Send(&summaryv1.StreamSummaryResponse{Summary: text})
+	log.Printf("StreamSummary request: %v, %v, %v", req.Msg.Areas, req.Msg.Lat, req.Msg.Long)
+
+	// Channel fan-in
+	outCh := make(chan *summaryv1.StreamSummaryResponse)
+
+	g, ctx := errgroup.WithContext(ctx)
+
+	// ---- ENERGY summarizer ----
+	g.Go(func() error {
+		summ := internal.NewSummarizer(
+			gcpProjectID,
+			"energy-management-data-sub",
+			cfg.Model,
+			cfg.Prompt,
+			func(text string) error {
+				select {
+				case outCh <- &summaryv1.StreamSummaryResponse{
+					EnergyManagmentSummary: text,
+				}:
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			},
+		)
+		return summ.Run(ctx)
 	})
-	return summarizer.Run(ctx)
+
+	// ---- TRAFFIC summarizer ----
+	g.Go(func() error {
+		summ := internal.NewSummarizer(
+			gcpProjectID,
+			"traffic-update-data-sub",
+			cfg.Model,
+			cfg.Prompt,
+			func(text string) error {
+				select {
+				case outCh <- &summaryv1.StreamSummaryResponse{
+					TrafficUpdateSummary: text,
+				}:
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			},
+		)
+		return summ.Run(ctx)
+	})
+
+	// ---- Forwarder (single writer to stream) ----
+	g.Go(func() error {
+		defer close(outCh)
+		for {
+			select {
+			case resp := <-outCh:
+				if resp == nil {
+					return nil
+				}
+				if err := stream.Send(resp); err != nil {
+					return err
+				}
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+	})
+
+	// Wait for any goroutine to error or for ctx cancel.
+	return g.Wait()
 }
 
 func main() {
@@ -118,11 +134,6 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// Energy events handler
-	eventsSrv := &EventsServiceServer{}
-	eventsPath, eventsHandler := energymanagementeventsv1connect.NewEnergyManagementEventsServiceHandler(eventsSrv)
-	mux.Handle(eventsPath, eventsHandler)
-
 	// Summary service handler
 	sumSrv := &summaryServer{}
 	sumPath, sumHandler := summaryv1connect.NewSummaryServiceHandler(sumSrv)
@@ -132,7 +143,6 @@ func main() {
 	h2cHandler := h2c.NewHandler(mux, &http2.Server{})
 	corsHandler := withCORS(h2cHandler)
 
-	log.Printf("Serving EnergyEvents at %s", eventsPath)
 	log.Printf("Serving SummaryService at %s", sumPath)
 	log.Printf("Listening on localhost:8080")
 	if err := http.ListenAndServe("localhost:8080", corsHandler); err != nil {
