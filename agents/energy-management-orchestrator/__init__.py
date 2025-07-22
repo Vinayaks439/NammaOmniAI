@@ -1,1 +1,1 @@
-from agent import .
+from .energy_coordinator import energy_coordinator as root_agent  # noqa: F401

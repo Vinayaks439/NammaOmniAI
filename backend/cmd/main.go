@@ -2,9 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"sync"
 
 	"connectrpc.com/connect"
 	"golang.org/x/net/http2"
@@ -17,6 +21,7 @@ import (
 	"backend/internal"
 
 	"golang.org/x/sync/errgroup"
+	genai "google.golang.org/genai"
 )
 
 const (
@@ -48,76 +53,107 @@ func (s *summaryServer) StreamSummary(
 	stream *connect.ServerStream[summaryv1.StreamSummaryResponse],
 ) error {
 
+	// Load config & prompt
 	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+
+	// Attempt to load richer system prompt from prompt.yaml (optional)
+	promptBytes, errPrompt := ioutil.ReadFile("backend/prompt.yaml")
+	var systemPrompt string
+	if errPrompt == nil {
+		var m map[string]interface{}
+		if err := json.Unmarshal(promptBytes, &m); err == nil {
+			if p, ok := m["prompt"].(string); ok {
+				systemPrompt = p
+			}
+		}
+	}
+	if systemPrompt == "" {
+		systemPrompt = cfg.Prompt
+	}
+
+	// init Gemini client once
+	apiKey := os.Getenv("GEMINI_API_KEY")
+	if apiKey == "" {
+		return fmt.Errorf("GEMINI_API_KEY env var not set")
+	}
+	genClient, err := genai.NewClient(ctx, &genai.ClientConfig{
+		APIKey:  apiKey,
+		Backend: genai.BackendGeminiAPI,
+	})
 	if err != nil {
 		return err
 	}
 
 	log.Printf("StreamSummary request: %v, %v, %v", req.Msg.Areas, req.Msg.Lat, req.Msg.Long)
 
-	// Channel fan-in
-	outCh := make(chan *summaryv1.StreamSummaryResponse)
+	var mu sync.Mutex
+	var latestEnergy string
+	var latestTraffic string
+
+	maybeGenerate := func() error {
+		mu.Lock()
+		defer mu.Unlock()
+		if latestEnergy == "" || latestTraffic == "" {
+			return nil // need both
+		}
+
+		prompt := systemPrompt + "\n\n" + latestEnergy + "\n" + latestTraffic
+		resp, err := genClient.Models.GenerateContent(ctx, cfg.Model, genai.Text(prompt), nil)
+		if err != nil {
+			return err
+		}
+		summaryText := resp.Text()
+
+		return stream.Send(&summaryv1.StreamSummaryResponse{Summary: summaryText})
+	}
 
 	g, ctx := errgroup.WithContext(ctx)
 
 	// ---- ENERGY summarizer ----
+	energyCh, cancelEnergy, err := internal.Subscribe(context.Background(), gcpProjectID, "energy-management-data-sub")
+	if err != nil {
+		return err
+	}
 	g.Go(func() error {
+		defer cancelEnergy()
 		summ := internal.NewSummarizer(
-			gcpProjectID,
-			"energy-management-data-sub",
-			cfg.Model,
-			cfg.Prompt,
+			energyCh,
+			"", // model not used
+			"", // prompt not used
 			func(text string) error {
-				select {
-				case outCh <- &summaryv1.StreamSummaryResponse{
-					EnergyManagmentSummary: text,
-				}:
-					return nil
-				case <-ctx.Done():
-					return ctx.Err()
-				}
+				log.Printf("ENERGY raw: %d bytes", len(text))
+				mu.Lock()
+				latestEnergy = text
+				mu.Unlock()
+				return maybeGenerate()
 			},
 		)
 		return summ.Run(ctx)
 	})
 
 	// ---- TRAFFIC summarizer ----
+	trafficCh, cancelTraffic, err := internal.Subscribe(context.Background(), gcpProjectID, "traffic-update-data-sub")
+	if err != nil {
+		return err
+	}
 	g.Go(func() error {
+		defer cancelTraffic()
 		summ := internal.NewSummarizer(
-			gcpProjectID,
-			"traffic-update-data-sub",
-			cfg.Model,
-			cfg.Prompt,
+			trafficCh,
+			"",
+			"",
 			func(text string) error {
-				select {
-				case outCh <- &summaryv1.StreamSummaryResponse{
-					TrafficUpdateSummary: text,
-				}:
-					return nil
-				case <-ctx.Done():
-					return ctx.Err()
-				}
+				log.Printf("TRAFFIC raw: %d bytes", len(text))
+				mu.Lock()
+				latestTraffic = text
+				mu.Unlock()
+				return maybeGenerate()
 			},
 		)
 		return summ.Run(ctx)
-	})
-
-	// ---- Forwarder (single writer to stream) ----
-	g.Go(func() error {
-		defer close(outCh)
-		for {
-			select {
-			case resp := <-outCh:
-				if resp == nil {
-					return nil
-				}
-				if err := stream.Send(resp); err != nil {
-					return err
-				}
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-		}
 	})
 
 	// Wait for any goroutine to error or for ctx cancel.

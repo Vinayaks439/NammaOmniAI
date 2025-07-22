@@ -135,8 +135,8 @@ def get_traffic_digest(user_input: str) -> TrafficDigestOutput:
     return asyncio.run(_run_and_clean(user_input))
 
 if __name__ == "__main__":
-    message = recieve_messages(lambda e: print(f"Error receiving message: {e}"))
-    #digest = get_traffic_digest("Provide a traffic update near [PES Colleage,Banashankari 3rd stage,Silk Board, Koramangala, MG Road, Hebbal Flyover] at 6pm IST 21st June including all data from BBMP, BTP, social media, and weather.")
-    digest = get_traffic_digest(message)
+    #message = recieve_messages(lambda e: print(f"Error receiving message: {e}"))
+    digest = get_traffic_digest("Provide a traffic update near [PES Colleage,Banashankari 3rd stage,Silk Board, Koramangala, MG Road, Hebbal Flyover] at 6pm IST 21st June including all data from BBMP, BTP, social media, and weather.")
+    #digest = get_traffic_digest(message)
     response = json.dumps(digest.model_dump(), indent=2)
     publish_messages(response, lambda e: print(f"Error publishing message: {e}"))

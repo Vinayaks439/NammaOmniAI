@@ -28,33 +28,55 @@ import {
 } from "@/components/ui/dropdown-menu"
 import Geofence from "@/components/dashboard/geofence"
 import { useSummaryStream } from "@/hooks/use-summary-stream"
+import { Skeleton } from "@/components/ui/skeleton"
 
 // (InteractiveMap removed – geofence component handles map rendering)
 
 // --- Re-composed components ---
 
-const AiSummaryCard = ({ energyManagmentSummary, trafficUpdateSummary }: { energyManagmentSummary: string | null; trafficUpdateSummary: string | null }) => (
-  <Card className="bg-black/20 border-white/10 backdrop-blur-lg bg-gradient-to-br from-blue-900/30 to-purple-900/30 h-full">
-    <CardHeader className="flex flex-row justify-between items-start">
-      <div>
-        <CardTitle className="text-2xl">Namma Omni AI Pulse</CardTitle>
-        <CardDescription>Your personalized morning brief.</CardDescription>
-      </div>
-      <span className="text-xs font-bold uppercase px-2 py-1 rounded bg-cyan-500/20 text-cyan-400">AI Generated</span>
-    </CardHeader>
-    <CardContent>
-      <p className="text-gray-300 leading-relaxed whitespace-pre-line">
-        {energyManagmentSummary ||
-          "ENergy placeholder Hey Vinayak, good afternoon! ☀️ Your day's shaping up to be a bright and sunny one — expect a pleasant 39°C on average. Your commute looks smooth with an ETA of around 45 minutes 👍, though there's a small hiccup — metro construction in HSR Layout might add about 10 extra minutes."}
-      </p>
-      <br />
-      <p className="text-gray-300 leading-relaxed whitespace-pre-line">
-        {trafficUpdateSummary ||
-          "Traffic placeholderHey Vinayak, good afternoon! ☀️ Your day's shaping up to be a bright and sunny one — expect a pleasant 39°C on average. Your commute looks smooth with an ETA of around 45 minutes 👍, though there's a small hiccup — metro construction in HSR Layout might add about 10 extra minutes."}
-      </p>
-    </CardContent>
-  </Card>
-)
+const AiSummaryCard = ({ summary }: { summary: string | null }) => {
+  // Loading state – show a placeholder card structure with skeleton lines
+  if (!summary) {
+    return (
+      <Card className="bg-black/20 border-white/10 backdrop-blur-lg h-full animate-pulse">
+        <CardHeader className="flex flex-row justify-between items-start">
+          <div className="space-y-2 flex-1">
+            <Skeleton className="h-6 w-48 bg-muted/50" />
+            <Skeleton className="h-4 w-32 bg-muted/50" />
+          </div>
+          <Skeleton className="h-5 w-20 rounded bg-muted/50" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-4 w-full bg-muted/50" />
+          <Skeleton className="h-4 w-5/6 bg-muted/50" />
+          <Skeleton className="h-4 w-2/3 bg-muted/50" />
+        </CardContent>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-4 w-full bg-muted/50" />
+          <Skeleton className="h-4 w-5/6 bg-muted/50" />
+          <Skeleton className="h-4 w-2/3 bg-muted/50" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="bg-black/20 border-white/10 backdrop-blur-lg bg-gradient-to-br from-blue-900/30 to-purple-900/30 h-full">
+      <CardHeader className="flex flex-row justify-between items-start">
+        <div>
+          <CardTitle className="text-2xl">Namma Omni AI Pulse</CardTitle>
+          <CardDescription>Your personalized live brief.</CardDescription>
+        </div>
+        <span className="text-xs font-bold uppercase px-2 py-1 rounded bg-cyan-500/20 text-cyan-400">AI Generated</span>
+      </CardHeader>
+      <CardContent>
+        <p className="text-gray-300 leading-relaxed whitespace-pre-line">
+          {summary}
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
 
 const QuickStats = () => (
   <Card className="bg-[#111113] border-gray-800 h-full">
@@ -246,11 +268,13 @@ const CommuteDelaysCard = () => (
 )
 
 export default function DashboardPage() {
+  const [center, setCenter] = useState({ lat: 12.971892, lng: 77.641155 })
+  const [areas, setAreas] = useState<string[]>([])
   const [feedItems, setFeedItems] = useState(allFeedItems)
   const [feedFilter, setFeedFilter] = useState("All Categories")
 
   // Live AI summary via gRPC stream
-  const [energyManagmentSummary, trafficUpdateSummary] = useSummaryStream();
+  const summary = useSummaryStream(center.lat, center.lng, areas);
 
   const handleGeofenceCreated = () => {
     // Simulate reloading feed data
@@ -268,18 +292,31 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* //Change the below classname to "lg:col-span-3" to remove Quick Stats */}
           <div className="lg:col-span-2">
-            <AiSummaryCard energyManagmentSummary={energyManagmentSummary} trafficUpdateSummary={trafficUpdateSummary} />
+            <AiSummaryCard summary={summary} />
           </div>
+          {/* //Comment the below 3 lines to remove Quick Stats */}
           <div className="lg:col-span-1">
             <QuickStats />
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 h-[60vh] min-h-[500px] rounded-lg overflow-hidden relative"><Geofence /></div>
+          <div className="lg:col-span-2 h-[60vh] min-h-[500px] rounded-lg overflow-hidden relative">
+            <Geofence
+              center={center}
+              areas={areas}
+              setCenter={setCenter}
+              setAreas={setAreas}
+            />
+          </div>
           <div className="lg:col-span-1 h-[60vh] min-h-[500px]">
-            <LiveFeed items={feedItems} filter={feedFilter} setFilter={setFeedFilter} />
+            <LiveFeed
+              items={feedItems}
+              filter={feedFilter}
+              setFilter={setFeedFilter}
+            />
           </div>
         </div>
 
@@ -289,5 +326,5 @@ export default function DashboardPage() {
         </div>
       </main>
     </div>
-  )
+  );
 }

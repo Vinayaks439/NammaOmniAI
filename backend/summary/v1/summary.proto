@@ -13,8 +13,7 @@ message StreamSummaryRequest {
 
 // The streamed response message containing the summary string.
 message StreamSummaryResponse {
-  string energy_managment_summary = 1;
-  string traffic_update_summary = 2;
+  string summary = 1;
 }
 
 // The summary service definition.
