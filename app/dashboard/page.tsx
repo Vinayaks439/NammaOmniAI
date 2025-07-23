@@ -268,7 +268,7 @@ const CommuteDelaysCard = () => (
 )
 
 export default function DashboardPage() {
-  const [center, setCenter] = useState({ lat: 12.971892, lng: 77.641155 })
+  const [center, setCenter] = useState({ lat: 0, lng: 0 })
   const [areas, setAreas] = useState<string[]>([])
   const [feedItems, setFeedItems] = useState(allFeedItems)
   const [feedFilter, setFeedFilter] = useState("All Categories")
