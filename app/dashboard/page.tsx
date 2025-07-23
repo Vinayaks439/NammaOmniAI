@@ -41,20 +41,20 @@ const AiSummaryCard = ({ summary }: { summary: string | null }) => {
       <Card className="bg-black/20 border-white/10 backdrop-blur-lg h-full animate-pulse">
         <CardHeader className="flex flex-row justify-between items-start">
           <div className="space-y-2 flex-1">
-            <Skeleton className="h-6 w-48 bg-muted/50" />
-            <Skeleton className="h-4 w-32 bg-muted/50" />
+            <Skeleton className="h-6 w-48 animate-none" />
+            <Skeleton className="h-4 w-32 animate-none" />
           </div>
-          <Skeleton className="h-5 w-20 rounded bg-muted/50" />
+          <Skeleton className="h-5 w-20 rounded animate-none" />
         </CardHeader>
         <CardContent className="space-y-3">
-          <Skeleton className="h-4 w-full bg-muted/50" />
-          <Skeleton className="h-4 w-5/6 bg-muted/50" />
-          <Skeleton className="h-4 w-2/3 bg-muted/50" />
+          <Skeleton className="h-4 w-full animate-none" />
+          <Skeleton className="h-4 w-5/6 animate-none" />
+          <Skeleton className="h-4 w-2/3 animate-none" />
         </CardContent>
         <CardContent className="space-y-3">
-          <Skeleton className="h-4 w-full bg-muted/50" />
-          <Skeleton className="h-4 w-5/6 bg-muted/50" />
-          <Skeleton className="h-4 w-2/3 bg-muted/50" />
+          <Skeleton className="h-4 w-full animate-none" />
+          <Skeleton className="h-4 w-5/6 animate-none" />
+          <Skeleton className="h-4 w-2/3 animate-none" />
         </CardContent>
       </Card>
     )
