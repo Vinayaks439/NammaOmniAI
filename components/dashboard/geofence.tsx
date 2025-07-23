@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Button } from "../ui/button";
+import { Skeleton } from "../ui/skeleton";
 
 interface GeofenceProps {
   center: { lat: number, lng: number };
@@ -14,7 +14,6 @@ export default function Geofence({ center, areas, setCenter, setAreas}: Geofence
   const mapRef = useRef<HTMLDivElement>(null)
   const [radius, setRadius] = useState(5000)
   const [error, setError] = useState<string | null>(null)
-  const [pendingUpdate, setPendingUpdate] = useState(false)
   const rectRef = useRef<any>(null)
   const geocoderRef = useRef<any>(null)
   const mapInstanceRef = useRef<any>(null)
@@ -159,15 +158,6 @@ export default function Geofence({ center, areas, setCenter, setAreas}: Geofence
     rectRef.current = rect
     // Automatically fetch areas once the rectangle & map are ready
     fetchAreas()
-
-    // When the user finishes dragging the rectangle, recalculate center & areas
-    rect.addListener("dragend", () => {
-      const newBounds = rect.getBounds()
-      const c = newBounds.getCenter()
-      // // Update map center visually
-      map.panTo(c)
-      setPendingUpdate(true)
-    })
   }
 
   // Update rectangle when radius changes
@@ -185,7 +175,7 @@ export default function Geofence({ center, areas, setCenter, setAreas}: Geofence
       west:  c.lng() - dLng
     })
     // Optionally, fit map to rectangle
-    map.fitBounds(rect.getBounds())
+    // map.fitBounds(rect.getBounds())
     // eslint-disable-next-line
   }, [radius])
 
@@ -251,28 +241,10 @@ export default function Geofence({ center, areas, setCenter, setAreas}: Geofence
             max={50}
             step={1}
             value={Number(radius)/1000}
-            onChange={e => {
-              setRadius(Number(e.target.value) * 1000)
-              setPendingUpdate(true)
-            }}
+            onChange={e => setRadius(Number(e.target.value) * 1000)}
           />
           <span>{Number(radius)/1000}</span>
         </label>
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={!pendingUpdate}
-          onClick={() => {
-            if (!rectRef.current) return
-            // Update center from current rectangle bounds; a separate effect
-            // will react to this change and call fetchAreas once.
-            const c = rectRef.current.getBounds().getCenter()
-            setCenter({ lat: c.lat(), lng: c.lng() })
-            setPendingUpdate(false)
-          }}
-        >
-          Update Geofence
-        </Button>
       </div>
     </div>
   )
