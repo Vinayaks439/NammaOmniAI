@@ -1,6 +1,6 @@
 # ---------- Dockerfile ----------
 # 1. use slim base with Python 3.12
-FROM python:3.12-slim AS runtime
+FROM python:3.13-slim AS runtime
 
 # 2. set working directory
 WORKDIR /app
@@ -12,19 +12,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # 4. copy dependency list & install
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 # 5. copy project code
 #    adjust the source path if your repo layout differs
-COPY . ./agents
+COPY . .
 
 # 6. environment variables
 #    – model + temperature are read from agent_config.json
-#    – supply your API key at runtime:  docker run -e GOOGLE_API_KEY=xxxx ...
-ENV PYTHONUNBUFFERED=1 \
-    GOOGLE_API_KEY=""
+#    – supply your API key and credentials at runtime:
+#      docker run \
+#        -e GOOGLE_API_KEY=<API_KEY> \
+#        -e GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json \
+#        -v /local/path/to/key.json:/path/to/key.json \
+ENV PYTHONUNBUFFERED=1 
 
 # 7. default command
 #    change the path if you moved or renamed orca.py
-CMD ["python", "agents/orca.py"]
+CMD ["functions-framework", "--target=run_energy_management_agent", "--signature-type=cloudevent"]
 

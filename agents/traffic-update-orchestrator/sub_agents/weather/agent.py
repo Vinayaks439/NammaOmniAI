@@ -7,7 +7,7 @@ from google.adk.tools import google_search
 
 from . import weather_prompt   # imports WEATHER_PROMPT
 
-MODEL = "gemini-2.5-pro"
+MODEL = "gemini-2.5-flash"
 
 weather_agent = Agent(
     model=MODEL,

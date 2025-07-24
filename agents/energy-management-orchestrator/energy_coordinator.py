@@ -17,7 +17,7 @@ from sub_agents.bescom.agent import bescom_agent
 import prompt
 from pubsub import publish_messages
 
-MODEL = "gemini-2.5-pro"
+MODEL = "gemini-2.5-flash"
 
 warnings.filterwarnings("ignore", message="there are non-text parts in the response:")
 

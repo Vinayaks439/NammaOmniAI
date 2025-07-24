@@ -89,6 +89,31 @@ func (s *summaryServer) StreamSummary(
 
 	log.Printf("StreamSummary request: %v, %v, %v", req.Msg.Areas, req.Msg.Lat, req.Msg.Long)
 
+	// Publish trigger messages to all agent topics to initiate their processing
+	triggerData, err := json.Marshal(map[string]interface{}{
+		"areas": req.Msg.Areas,
+		"lat":   req.Msg.Lat,
+		"long":  req.Msg.Long,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to marshal trigger data: %v", err)
+	}
+
+	// Trigger topics for each agent
+	triggerTopics := []string{
+		"trigger-traffic-update-agent",
+		"trigger-energy-management-agent",
+	}
+
+	for _, topicID := range triggerTopics {
+		if err := internal.Publish(ctx, gcpProjectID, topicID, triggerData); err != nil {
+			log.Printf("Failed to publish to %s: %v", topicID, err)
+			// Continue with other topics even if one fails
+		} else {
+			log.Printf("Published trigger message to %s", topicID)
+		}
+	}
+
 	var mu sync.Mutex
 	var latestEnergy string
 	var latestTraffic string

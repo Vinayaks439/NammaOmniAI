@@ -5,7 +5,7 @@ from google.adk.tools import google_search
 
 from . import bbmp_prompt  # ⇨ imports BBMP_PROMPT
 
-MODEL = "gemini-2.5-pro"
+MODEL = "gemini-2.5-flash"
 
 bbmp_agent = Agent(
     model=MODEL,

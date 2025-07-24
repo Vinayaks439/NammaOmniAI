@@ -17,14 +17,9 @@ type SummaryConfig struct {
 func Load() (*SummaryConfig, error) {
 	v := viper.New()
 
-	v.SetConfigName("prompt") // looks for prompt.yaml|json|toml
-	// Look for the file in the current directory as well as the backend folder so it works
-	// whether the binary is started from the repository root (e.g. `go run ./backend/cmd`)
-	// or from within the backend directory itself.
-	v.AddConfigPath(".")         // current working directory
-	v.AddConfigPath("./backend") // repository-root relative
-	v.AddConfigPath("./config")  // optional dedicated config folder
-	v.AddConfigPath("..")        // parent directory when running from backend/cmd
+	v.SetConfigName("config") // looks for config.yaml|json|toml
+	v.AddConfigPath("./config")
+	v.AddConfigPath(".")
 
 	v.SetConfigType("yaml") // default type if file provided
 

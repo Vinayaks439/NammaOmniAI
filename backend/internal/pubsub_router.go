@@ -126,3 +126,20 @@ func (r *router) receiveLoop(ctx context.Context, subscriptionID string, fan *su
 		log.Printf("pubsub receive loop for %s terminated: %v", subscriptionID, err)
 	}
 }
+
+// Publish publishes a message to the specified topic
+func Publish(ctx context.Context, projectID, topicID string, data []byte) error {
+	r, err := getRouter(ctx, projectID)
+	if err != nil {
+		return err
+	}
+
+	topic := r.client.Topic(topicID)
+	result := topic.Publish(ctx, &pubsub.Message{
+		Data: data,
+	})
+
+	// Wait for the publish to complete
+	_, err = result.Get(ctx)
+	return err
+}

@@ -5,7 +5,7 @@ from google.adk.tools import google_search
 
 from . import btp_prompt   # ⇨ imports BTP_PROMPT
 
-MODEL = "gemini-2.5-pro"
+MODEL = "gemini-2.5-flash"
 
 btp_agent = Agent(
     model=MODEL,
