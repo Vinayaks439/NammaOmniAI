@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package trafficupdaterevents.v1;
+
+option go_package = "backend/gen/trafficupdaterevents/v1;trafficupdatereventsv1";
+
+// The TrafficUpdateEventsService defines the streaming endpoint for real-time events.
+service TrafficUpdateEventsService {
+    // StreamTrafficUpdateEvents establishes a grpc-web streaming endpoint that pushes StreamTrafficUpdateEventsResponse messages.
+    rpc StreamTrafficUpdateEvents(StreamTrafficUpdateEventsRequest) returns (stream StreamTrafficUpdateEventsResponse) {}
+}
+
+// Request message for streaming events.
+// This can include filtering options in the future if needed.
+message StreamTrafficUpdateEventsRequest {
+    // Optional filter parameter (e.g., event type or keyword).
+    string filter = 1;
+}
+
+// Represents a real-time event.
+message StreamTrafficUpdateEventsResponse {
+    // Unique identifier for the event.
+    string id = 1;
+    // Timestamp in epoch seconds.
+    int64 timestamp = 2;
+    // // The type of event.
+    // TrafficUpdateEventsType type = 3;
+    // Flexible payload containing event details (in JSON format).
+    string payload = 4;
+}
+
+// // Enumeration of possible event types.
+// enum TrafficUpdateEventsType {
+//     // Unspecified event type.
+//     EVENT_TYPE_UNKNOWN_UNSPECIFIED = 0;
+//     EVENT_TYPE_TRAFFIC = 1;
+//     EVENT_TYPE_WASTE = 2;
+//     EVENT_TYPE_ENERGY = 3;
+//     EVENT_TYPE_EMERGENCY = 4;
+// }
