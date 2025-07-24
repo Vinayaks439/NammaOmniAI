@@ -283,7 +283,7 @@ func (s *trafficUpdateEventsServer) StreamTrafficUpdateEvents(
 	req *connect.Request[trafficupdatereventsv1.StreamTrafficUpdateEventsRequest],
 	stream *connect.ServerStream[trafficupdatereventsv1.StreamTrafficUpdateEventsResponse],
 ) error {
-	ch, cancel, err := internal.Subscribe(ctx, gcpProjectID, "traffic-update-data-sub")
+	ch, cancel, err := internal.Subscribe(context.Background(), gcpProjectID, "traffic-update-data-sub")
 	if err != nil {
 		return err
 	}
