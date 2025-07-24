@@ -23,10 +23,23 @@ message StreamEnergyManagementEventsResponse {
     string id = 1;
     // Timestamp in epoch seconds.
     int64 timestamp = 2;
-    // // The type of event.
-    // EnergyManagementEventsType type = 3;
-    // Flexible payload containing event details (in JSON format).
-    string payload = 4;
+
+    // NEW – parsed content (replaces the old “payload” string)
+    repeated OutageSummaryEntry outage_summary = 3;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Nested message definition
+// ────────────────────────────────────────────────────────────────
+message OutageSummaryEntry {
+  string        timestamp   = 1;
+  repeated string locations = 2;
+  string        summary     = 3;
+  string        severity    = 4;
+  string        start_time  = 5;
+  string        end_time    = 6;
+  string        reason      = 7;
+  string        advice      = 8;
 }
 
 // // Enumeration of possible event types.

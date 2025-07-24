@@ -70,15 +70,12 @@ func (x *StreamTrafficUpdateEventsRequest) GetFilter() string {
 
 // Represents a real-time event.
 type StreamTrafficUpdateEventsResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Unique identifier for the event.
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// Timestamp in epoch seconds.
-	Timestamp int64 `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	// // The type of event.
-	// TrafficUpdateEventsType type = 3;
-	// Flexible payload containing event details (in JSON format).
-	Payload       string `protobuf:"bytes,4,opt,name=payload,proto3" json:"payload,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                // unique event id
+	Timestamp int64                  `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"` // server-side epoch seconds
+	// NEW – parsed content
+	TrafficDigest []*TrafficDigestEntry `protobuf:"bytes,3,rep,name=traffic_digest,json=trafficDigest,proto3" json:"traffic_digest,omitempty"`
+	Weather       []*WeatherSummary     `protobuf:"bytes,4,rep,name=weather,proto3" json:"weather,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -127,9 +124,179 @@ func (x *StreamTrafficUpdateEventsResponse) GetTimestamp() int64 {
 	return 0
 }
 
-func (x *StreamTrafficUpdateEventsResponse) GetPayload() string {
+func (x *StreamTrafficUpdateEventsResponse) GetTrafficDigest() []*TrafficDigestEntry {
 	if x != nil {
-		return x.Payload
+		return x.TrafficDigest
+	}
+	return nil
+}
+
+func (x *StreamTrafficUpdateEventsResponse) GetWeather() []*WeatherSummary {
+	if x != nil {
+		return x.Weather
+	}
+	return nil
+}
+
+// ────────────────────────────────────────────────────────────────
+// Nested message definitions
+// ────────────────────────────────────────────────────────────────
+type TrafficDigestEntry struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Timestamp      string                 `protobuf:"bytes,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Location       string                 `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`
+	Summary        string                 `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`
+	SeverityReason string                 `protobuf:"bytes,4,opt,name=severity_reason,json=severityReason,proto3" json:"severity_reason,omitempty"`
+	Delay          string                 `protobuf:"bytes,5,opt,name=delay,proto3" json:"delay,omitempty"`
+	Advice         string                 `protobuf:"bytes,6,opt,name=advice,proto3" json:"advice,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *TrafficDigestEntry) Reset() {
+	*x = TrafficDigestEntry{}
+	mi := &file_trafficupdaterevents_v1_events_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TrafficDigestEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TrafficDigestEntry) ProtoMessage() {}
+
+func (x *TrafficDigestEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_trafficupdaterevents_v1_events_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TrafficDigestEntry.ProtoReflect.Descriptor instead.
+func (*TrafficDigestEntry) Descriptor() ([]byte, []int) {
+	return file_trafficupdaterevents_v1_events_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *TrafficDigestEntry) GetTimestamp() string {
+	if x != nil {
+		return x.Timestamp
+	}
+	return ""
+}
+
+func (x *TrafficDigestEntry) GetLocation() string {
+	if x != nil {
+		return x.Location
+	}
+	return ""
+}
+
+func (x *TrafficDigestEntry) GetSummary() string {
+	if x != nil {
+		return x.Summary
+	}
+	return ""
+}
+
+func (x *TrafficDigestEntry) GetSeverityReason() string {
+	if x != nil {
+		return x.SeverityReason
+	}
+	return ""
+}
+
+func (x *TrafficDigestEntry) GetDelay() string {
+	if x != nil {
+		return x.Delay
+	}
+	return ""
+}
+
+func (x *TrafficDigestEntry) GetAdvice() string {
+	if x != nil {
+		return x.Advice
+	}
+	return ""
+}
+
+type WeatherSummary struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Location      string                 `protobuf:"bytes,1,opt,name=location,proto3" json:"location,omitempty"`
+	Temperature   string                 `protobuf:"bytes,2,opt,name=temperature,proto3" json:"temperature,omitempty"`
+	Conditions    string                 `protobuf:"bytes,3,opt,name=conditions,proto3" json:"conditions,omitempty"`
+	Precipitation string                 `protobuf:"bytes,4,opt,name=precipitation,proto3" json:"precipitation,omitempty"`
+	Wind          string                 `protobuf:"bytes,5,opt,name=wind,proto3" json:"wind,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WeatherSummary) Reset() {
+	*x = WeatherSummary{}
+	mi := &file_trafficupdaterevents_v1_events_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WeatherSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WeatherSummary) ProtoMessage() {}
+
+func (x *WeatherSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_trafficupdaterevents_v1_events_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WeatherSummary.ProtoReflect.Descriptor instead.
+func (*WeatherSummary) Descriptor() ([]byte, []int) {
+	return file_trafficupdaterevents_v1_events_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *WeatherSummary) GetLocation() string {
+	if x != nil {
+		return x.Location
+	}
+	return ""
+}
+
+func (x *WeatherSummary) GetTemperature() string {
+	if x != nil {
+		return x.Temperature
+	}
+	return ""
+}
+
+func (x *WeatherSummary) GetConditions() string {
+	if x != nil {
+		return x.Conditions
+	}
+	return ""
+}
+
+func (x *WeatherSummary) GetPrecipitation() string {
+	if x != nil {
+		return x.Precipitation
+	}
+	return ""
+}
+
+func (x *WeatherSummary) GetWind() string {
+	if x != nil {
+		return x.Wind
 	}
 	return ""
 }
@@ -140,11 +307,27 @@ const file_trafficupdaterevents_v1_events_proto_rawDesc = "" +
 	"\n" +
 	"$trafficupdaterevents/v1/events.proto\x12\x17trafficupdaterevents.v1\":\n" +
 	" StreamTrafficUpdateEventsRequest\x12\x16\n" +
-	"\x06filter\x18\x01 \x01(\tR\x06filter\"k\n" +
+	"\x06filter\x18\x01 \x01(\tR\x06filter\"\xe8\x01\n" +
 	"!StreamTrafficUpdateEventsResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1c\n" +
-	"\ttimestamp\x18\x02 \x01(\x03R\ttimestamp\x12\x18\n" +
-	"\apayload\x18\x04 \x01(\tR\apayload2\xb5\x01\n" +
+	"\ttimestamp\x18\x02 \x01(\x03R\ttimestamp\x12R\n" +
+	"\x0etraffic_digest\x18\x03 \x03(\v2+.trafficupdaterevents.v1.TrafficDigestEntryR\rtrafficDigest\x12A\n" +
+	"\aweather\x18\x04 \x03(\v2'.trafficupdaterevents.v1.WeatherSummaryR\aweather\"\xbf\x01\n" +
+	"\x12TrafficDigestEntry\x12\x1c\n" +
+	"\ttimestamp\x18\x01 \x01(\tR\ttimestamp\x12\x1a\n" +
+	"\blocation\x18\x02 \x01(\tR\blocation\x12\x18\n" +
+	"\asummary\x18\x03 \x01(\tR\asummary\x12'\n" +
+	"\x0fseverity_reason\x18\x04 \x01(\tR\x0eseverityReason\x12\x14\n" +
+	"\x05delay\x18\x05 \x01(\tR\x05delay\x12\x16\n" +
+	"\x06advice\x18\x06 \x01(\tR\x06advice\"\xa8\x01\n" +
+	"\x0eWeatherSummary\x12\x1a\n" +
+	"\blocation\x18\x01 \x01(\tR\blocation\x12 \n" +
+	"\vtemperature\x18\x02 \x01(\tR\vtemperature\x12\x1e\n" +
+	"\n" +
+	"conditions\x18\x03 \x01(\tR\n" +
+	"conditions\x12$\n" +
+	"\rprecipitation\x18\x04 \x01(\tR\rprecipitation\x12\x12\n" +
+	"\x04wind\x18\x05 \x01(\tR\x04wind2\xb5\x01\n" +
 	"\x1aTrafficUpdateEventsService\x12\x96\x01\n" +
 	"\x19StreamTrafficUpdateEvents\x129.trafficupdaterevents.v1.StreamTrafficUpdateEventsRequest\x1a:.trafficupdaterevents.v1.StreamTrafficUpdateEventsResponse\"\x000\x01B<Z:backend/gen/trafficupdaterevents/v1;trafficupdatereventsv1b\x06proto3"
 
@@ -160,19 +343,23 @@ func file_trafficupdaterevents_v1_events_proto_rawDescGZIP() []byte {
 	return file_trafficupdaterevents_v1_events_proto_rawDescData
 }
 
-var file_trafficupdaterevents_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_trafficupdaterevents_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_trafficupdaterevents_v1_events_proto_goTypes = []any{
 	(*StreamTrafficUpdateEventsRequest)(nil),  // 0: trafficupdaterevents.v1.StreamTrafficUpdateEventsRequest
 	(*StreamTrafficUpdateEventsResponse)(nil), // 1: trafficupdaterevents.v1.StreamTrafficUpdateEventsResponse
+	(*TrafficDigestEntry)(nil),                // 2: trafficupdaterevents.v1.TrafficDigestEntry
+	(*WeatherSummary)(nil),                    // 3: trafficupdaterevents.v1.WeatherSummary
 }
 var file_trafficupdaterevents_v1_events_proto_depIdxs = []int32{
-	0, // 0: trafficupdaterevents.v1.TrafficUpdateEventsService.StreamTrafficUpdateEvents:input_type -> trafficupdaterevents.v1.StreamTrafficUpdateEventsRequest
-	1, // 1: trafficupdaterevents.v1.TrafficUpdateEventsService.StreamTrafficUpdateEvents:output_type -> trafficupdaterevents.v1.StreamTrafficUpdateEventsResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	2, // 0: trafficupdaterevents.v1.StreamTrafficUpdateEventsResponse.traffic_digest:type_name -> trafficupdaterevents.v1.TrafficDigestEntry
+	3, // 1: trafficupdaterevents.v1.StreamTrafficUpdateEventsResponse.weather:type_name -> trafficupdaterevents.v1.WeatherSummary
+	0, // 2: trafficupdaterevents.v1.TrafficUpdateEventsService.StreamTrafficUpdateEvents:input_type -> trafficupdaterevents.v1.StreamTrafficUpdateEventsRequest
+	1, // 3: trafficupdaterevents.v1.TrafficUpdateEventsService.StreamTrafficUpdateEvents:output_type -> trafficupdaterevents.v1.StreamTrafficUpdateEventsResponse
+	3, // [3:4] is the sub-list for method output_type
+	2, // [2:3] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_trafficupdaterevents_v1_events_proto_init() }
@@ -186,7 +373,7 @@ func file_trafficupdaterevents_v1_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_trafficupdaterevents_v1_events_proto_rawDesc), len(file_trafficupdaterevents_v1_events_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

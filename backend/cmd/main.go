@@ -194,7 +194,7 @@ func (s *summaryServer) StreamSummary(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. Energy-Management live-feed server
+// 1. Energy-Management live-feed server (updated to parse JSON)
 // ─────────────────────────────────────────────────────────────────────────────
 type energyManagementEventsServer struct{}
 
@@ -209,6 +209,21 @@ func (s *energyManagementEventsServer) StreamEnergyManagementEvents(
 	}
 	defer cancel()
 
+	// helper structure to unmarshal the raw Pub/Sub JSON
+	type rawOutage struct {
+		Timestamp string   `json:"timestamp"`
+		Locations []string `json:"locations"`
+		Summary   string   `json:"summary"`
+		Severity  string   `json:"severity"`
+		StartTime string   `json:"start_time"`
+		EndTime   string   `json:"end_time"`
+		Reason    string   `json:"reason"`
+		Advice    string   `json:"advice"`
+	}
+	type rawPayload struct {
+		OutageSummary []rawOutage `json:"outage_summary"`
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -217,15 +232,40 @@ func (s *energyManagementEventsServer) StreamEnergyManagementEvents(
 			if !ok {
 				return nil
 			}
+			// optional request-level filter
 			if f := strings.TrimSpace(req.Msg.Filter); f != "" &&
 				!strings.Contains(strings.ToLower(raw), strings.ToLower(f)) {
 				continue
 			}
-			if err := stream.Send(&energymanagementeventsv1.StreamEnergyManagementEventsResponse{
+
+			var parsed rawPayload
+			if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
+				// skip malformed messages
+				continue
+			}
+
+			resp := &energymanagementeventsv1.StreamEnergyManagementEventsResponse{
 				Id:        fmt.Sprintf("%d", time.Now().UnixNano()),
 				Timestamp: time.Now().Unix(),
-				Payload:   raw,
-			}); err != nil {
+			}
+
+			for _, o := range parsed.OutageSummary {
+				resp.OutageSummary = append(
+					resp.OutageSummary,
+					&energymanagementeventsv1.OutageSummaryEntry{
+						Timestamp: o.Timestamp,
+						Locations: o.Locations,
+						Summary:   o.Summary,
+						Severity:  o.Severity,
+						StartTime: o.StartTime,
+						EndTime:   o.EndTime,
+						Reason:    o.Reason,
+						Advice:    o.Advice,
+					},
+				)
+			}
+
+			if err := stream.Send(resp); err != nil {
 				return err
 			}
 		}
@@ -248,6 +288,28 @@ func (s *trafficUpdateEventsServer) StreamTrafficUpdateEvents(
 	}
 	defer cancel()
 
+	// helpers for quick JSON → struct
+	type rawWeather struct {
+		WeatherSummary struct {
+			Location      string `json:"location"`
+			Temperature   string `json:"temperature"`
+			Conditions    string `json:"conditions"`
+			Precipitation string `json:"precipitation"`
+			Wind          string `json:"wind"`
+		} `json:"weather_summary"`
+	}
+	type rawPayload struct {
+		BengaluruTrafficDigest []struct {
+			Timestamp      string `json:"timestamp"`
+			Location       string `json:"location"`
+			Summary        string `json:"summary"`
+			SeverityReason string `json:"severity_reason"`
+			Delay          string `json:"delay"`
+			Advice         string `json:"advice"`
+		} `json:"bengaluru_traffic_digest"`
+		LocationWeather []rawWeather `json:"location_weather"`
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -256,15 +318,43 @@ func (s *trafficUpdateEventsServer) StreamTrafficUpdateEvents(
 			if !ok {
 				return nil
 			}
+			// optional text filter
 			if f := strings.TrimSpace(req.Msg.Filter); f != "" &&
 				!strings.Contains(strings.ToLower(raw), strings.ToLower(f)) {
 				continue
 			}
-			if err := stream.Send(&trafficupdatereventsv1.StreamTrafficUpdateEventsResponse{
+
+			var parsed rawPayload
+			if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
+				// skip malformed payloads
+				continue
+			}
+
+			resp := &trafficupdatereventsv1.StreamTrafficUpdateEventsResponse{
 				Id:        fmt.Sprintf("%d", time.Now().UnixNano()),
 				Timestamp: time.Now().Unix(),
-				Payload:   raw,
-			}); err != nil {
+			}
+
+			for _, d := range parsed.BengaluruTrafficDigest {
+				resp.TrafficDigest = append(resp.TrafficDigest, &trafficupdatereventsv1.TrafficDigestEntry{
+					Timestamp:      d.Timestamp,
+					Location:       d.Location,
+					Summary:        d.Summary,
+					SeverityReason: d.SeverityReason,
+					Delay:          d.Delay,
+					Advice:         d.Advice,
+				})
+			}
+			for _, w := range parsed.LocationWeather {
+				resp.Weather = append(resp.Weather, &trafficupdatereventsv1.WeatherSummary{
+					Location:      w.WeatherSummary.Location,
+					Temperature:   w.WeatherSummary.Temperature,
+					Conditions:    w.WeatherSummary.Conditions,
+					Precipitation: w.WeatherSummary.Precipitation,
+					Wind:          w.WeatherSummary.Wind,
+				})
+			}
+			if err := stream.Send(resp); err != nil {
 				return err
 			}
 		}

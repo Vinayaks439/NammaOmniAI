@@ -19,14 +19,32 @@ message StreamTrafficUpdateEventsRequest {
 
 // Represents a real-time event.
 message StreamTrafficUpdateEventsResponse {
-    // Unique identifier for the event.
-    string id = 1;
-    // Timestamp in epoch seconds.
-    int64 timestamp = 2;
-    // // The type of event.
-    // TrafficUpdateEventsType type = 3;
-    // Flexible payload containing event details (in JSON format).
-    string payload = 4;
+  string id        = 1;   // unique event id
+  int64  timestamp = 2;   // server-side epoch seconds
+
+  // NEW – parsed content
+  repeated TrafficDigestEntry traffic_digest = 3;
+  repeated WeatherSummary     weather        = 4;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Nested message definitions
+// ────────────────────────────────────────────────────────────────
+message TrafficDigestEntry {
+  string timestamp       = 1;
+  string location        = 2;
+  string summary         = 3;
+  string severity_reason = 4;
+  string delay           = 5;
+  string advice          = 6;
+}
+
+message WeatherSummary {
+  string location      = 1;
+  string temperature   = 2;
+  string conditions    = 3;
+  string precipitation = 4;
+  string wind          = 5;
 }
 
 // // Enumeration of possible event types.
