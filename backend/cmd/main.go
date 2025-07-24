@@ -327,6 +327,7 @@ func (s *trafficUpdateEventsServer) StreamTrafficUpdateEvents(
 
 			var parsed rawPayload
 			if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
+				log.Printf("Failed to parse JSON payload: %v. Raw data: %s", err, raw)
 				// skip malformed payloads
 				continue
 			}
