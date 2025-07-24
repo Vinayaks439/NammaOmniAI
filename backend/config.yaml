@@ -1,5 +1,0 @@
-prompt: "Summarise the following data in one sentence"
-model: "gemini-2.5-flash"
-pubsub_subscription_ids:
-  - energy-management-data-sub
-  - traffic-update-data-sub

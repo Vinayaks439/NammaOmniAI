@@ -4,7 +4,9 @@ import uuid
 import asyncio
 import logging
 import warnings
-
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 from pydantic import BaseModel, Field, field_validator
 from typing import Any
 from google.adk.agents import LlmAgent
@@ -18,9 +20,8 @@ from sub_agents.btp.agent import btp_agent
 from sub_agents.social_media.agent import social_media_agent
 from sub_agents.weather.agent import weather_agent
 import prompt
-from pubsub import publish_messages,recieve_messages  # for publish_messages
 
-MODEL = "gemini-2.5-pro"
+MODEL = "gemini-2.5-flash"
 
 warnings.filterwarnings("ignore", message="there are non-text parts in the response:")
 
@@ -133,10 +134,3 @@ async def _run_and_clean(user_input: str) -> TrafficDigestOutput:
 
 def get_traffic_digest(user_input: str) -> TrafficDigestOutput:
     return asyncio.run(_run_and_clean(user_input))
-
-if __name__ == "__main__":
-    message = recieve_messages(lambda e: print(f"Error receiving message: {e}"))
-    #digest = get_traffic_digest("Provide a traffic update near [PES Colleage,Banashankari 3rd stage,Silk Board, Koramangala, MG Road, Hebbal Flyover] at 6pm IST 21st June including all data from BBMP, BTP, social media, and weather.")
-    digest = get_traffic_digest(message)
-    response = json.dumps(digest.model_dump(), indent=2)
-    publish_messages(response, lambda e: print(f"Error publishing message: {e}"))

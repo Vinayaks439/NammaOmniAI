@@ -84,11 +84,10 @@ func (x *StreamSummaryRequest) GetAreas() []string {
 
 // The streamed response message containing the summary string.
 type StreamSummaryResponse struct {
-	state                  protoimpl.MessageState `protogen:"open.v1"`
-	EnergyManagmentSummary string                 `protobuf:"bytes,1,opt,name=energy_managment_summary,json=energyManagmentSummary,proto3" json:"energy_managment_summary,omitempty"`
-	TrafficUpdateSummary   string                 `protobuf:"bytes,2,opt,name=traffic_update_summary,json=trafficUpdateSummary,proto3" json:"traffic_update_summary,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Summary       string                 `protobuf:"bytes,1,opt,name=summary,proto3" json:"summary,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *StreamSummaryResponse) Reset() {
@@ -121,16 +120,9 @@ func (*StreamSummaryResponse) Descriptor() ([]byte, []int) {
 	return file_summary_v1_summary_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *StreamSummaryResponse) GetEnergyManagmentSummary() string {
+func (x *StreamSummaryResponse) GetSummary() string {
 	if x != nil {
-		return x.EnergyManagmentSummary
-	}
-	return ""
-}
-
-func (x *StreamSummaryResponse) GetTrafficUpdateSummary() string {
-	if x != nil {
-		return x.TrafficUpdateSummary
+		return x.Summary
 	}
 	return ""
 }
@@ -144,10 +136,9 @@ const file_summary_v1_summary_proto_rawDesc = "" +
 	"\x14StreamSummaryRequest\x12\x10\n" +
 	"\x03lat\x18\x01 \x01(\x01R\x03lat\x12\x12\n" +
 	"\x04long\x18\x02 \x01(\x01R\x04long\x12\x14\n" +
-	"\x05areas\x18\x03 \x03(\tR\x05areas\"\x87\x01\n" +
-	"\x15StreamSummaryResponse\x128\n" +
-	"\x18energy_managment_summary\x18\x01 \x01(\tR\x16energyManagmentSummary\x124\n" +
-	"\x16traffic_update_summary\x18\x02 \x01(\tR\x14trafficUpdateSummary2h\n" +
+	"\x05areas\x18\x03 \x03(\tR\x05areas\"1\n" +
+	"\x15StreamSummaryResponse\x12\x18\n" +
+	"\asummary\x18\x01 \x01(\tR\asummary2h\n" +
 	"\x0eSummaryService\x12V\n" +
 	"\rStreamSummary\x12 .summary.v1.StreamSummaryRequest\x1a!.summary.v1.StreamSummaryResponse0\x01B\"Z backend/gen/summary/v1;summaryv1b\x06proto3"
 

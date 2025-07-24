@@ -1,13 +1,18 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { Skeleton } from "../ui/skeleton";
 
-export default function Geofence() {
+interface GeofenceProps {
+  center: { lat: number, lng: number };
+  areas: string[];
+  setCenter: (center: { lat: number, lng: number }) => void;
+  setAreas: (areas: string[]) => void;
+}
+
+export default function Geofence({ center, areas, setCenter, setAreas}: GeofenceProps) {
   const mapRef = useRef<HTMLDivElement>(null)
-  const [center, setCenter] = useState({ lat: 0, lng: 0 })
   const [radius, setRadius] = useState(5000)
-  const [areas, setAreas] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const rectRef = useRef<any>(null)
   const geocoderRef = useRef<any>(null)
@@ -19,31 +24,39 @@ export default function Geofence() {
 
   // Load Google Maps JS API
   useEffect(() => {
-    if (!(window as any).google) {
-      const script = document.createElement("script")
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&callback=initMap`
-      script.async = true
-      if (document.body) {
-        document.body.appendChild(script)
+    const loadMap = async () => {
+      if (!(window as any).google) {
+        const script = document.createElement("script")
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&callback=initMap`
+        script.async = true
+        if (document.body) {
+          document.body.appendChild(script)
+        }
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition((position) => {
+            setCenter({ lat: position.coords.latitude, lng: position.coords.longitude })
+          })
+        }
+        // Google Maps will call `initMap` once the script is loaded
+        (window as any).initMap = initMap
+      } else {
+        // Script already loaded – initialise immediately
+        initMap()
       }
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((position) => {
-          setCenter({ lat: position.coords.latitude, lng: position.coords.longitude })
-        })
-      }
-      (window as any).initMap = initMap
-    } else {
-      initMap()
     }
-    // eslint-disable-next-line
-    return () => { (window as any).initMap = undefined }
-    // eslint-disable-next-line
+    loadMap()
+
+    return () => {
+      // Clean up the global callback on unmount
+      (window as any).initMap = undefined
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [center])
 
   // Expose initMap globally for Google callback
   function initMap() {
     const map = new (window as any).google.maps.Map(mapRef.current, {
-      center, zoom: 13,
+      center, zoom: 12,
       styles: [
         { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
         { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
@@ -143,6 +156,8 @@ export default function Geofence() {
       strokeColor: '#FF0000', strokeWeight: 2
     })
     rectRef.current = rect
+    // Automatically fetch areas once the rectangle & map are ready
+    fetchAreas()
   }
 
   // Update rectangle when radius changes
@@ -178,7 +193,6 @@ export default function Geofence() {
   // Fetch areas in rectangle
   async function fetchAreas() {
     if (!rectRef.current) return
-    setLoading(true)
     setError(null)
     setAreas([])
     try {
@@ -212,8 +226,6 @@ export default function Geofence() {
       if (!names.size) setError('No areas found in this box')
     } catch (err: any) {
       setError('Geocoder error: ' + err)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -233,21 +245,7 @@ export default function Geofence() {
           />
           <span>{Number(radius)/1000}</span>
         </label>
-        <button
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          onClick={fetchAreas}
-          disabled={loading}
-        >
-          {loading ? 'Fetching...' : 'Fetch Areas'}
-        </button>
       </div>
-      <ul className="absolute bottom-0 left-0 right-0 max-h-40 overflow-y-auto bg-white/90 list-none m-0 p-2 z-10">
-        {error && <li className="text-red-500">{error}</li>}
-        {!error && areas.length === 0 && !loading && <li className="text-gray-400">No areas found yet</li>}
-        {areas.map(area => (
-          <li key={area} className="border-b border-gray-200 py-1 text-gray-800">{area}</li>
-        ))}
-      </ul>
     </div>
   )
 } 

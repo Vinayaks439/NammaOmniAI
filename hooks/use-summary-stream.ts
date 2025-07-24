@@ -24,15 +24,19 @@ function buildConnectFrame(jsonObj: unknown): Uint8Array {
  * content-type quirks.
  */
 export function useSummaryStream(
-  lat = 12.9716,
-  long = 77.5946,
-  areas: string[] = ["HSR Layout", "Indiranagar", "Bellandur", "Koramangala", "Whitefield"],
+  lat: number,
+  long: number,
+  areas: string[] = [],
 ) {
-  const [trafficUpdateSummary, setTrafficUpdateSummary] = useState<string | null>(null)
-  const [energyManagmentSummary, setEnergyManagmentSummary] = useState<string | null>(null)
+  const [summary, setSummary] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
+    // Wait until we have at least one area before opening the stream
+    if (!areas || areas.length === 0) {
+      return
+    }
+
     const controller = new AbortController()
     abortRef.current = controller
 
@@ -82,11 +86,8 @@ export function useSummaryStream(
                 const text = decoder.decode(msgBytes)
                 try {
                   const json = JSON.parse(text)
-                  if (json.energyManagmentSummary) {
-                    setEnergyManagmentSummary(json.energyManagmentSummary as string)
-                  }
-                  if (json.trafficUpdateSummary) {
-                    setTrafficUpdateSummary(json.trafficUpdateSummary as string)
+                  if (json.summary) {
+                    setSummary(json.summary as string)
                   }
                 } catch (e) {
                   console.warn("Invalid JSON frame", e)
@@ -111,7 +112,7 @@ export function useSummaryStream(
       controller.abort()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lat, long])
+  }, [lat, long, JSON.stringify(areas)])
 
-  return [energyManagmentSummary, trafficUpdateSummary] as const
+  return summary
 } 

@@ -5,7 +5,7 @@ from google.adk.tools import google_search
 
 from . import social_media_prompt   # ⇨ imports SOCIAL_MEDIA_PROMPT
 
-MODEL = "gemini-2.5-pro"
+MODEL = "gemini-2.5-flash"
 
 social_media_agent = Agent(
     model=MODEL,
