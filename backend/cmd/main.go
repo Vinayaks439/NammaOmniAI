@@ -240,7 +240,8 @@ func (s *energyManagementEventsServer) StreamEnergyManagementEvents(
 
 			var parsed rawPayload
 			if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
-				// skip malformed messages
+				// log the error and skip malformed messages
+				log.Printf("JSON parsing error: %v. Raw data: %s", err, raw)
 				continue
 			}
 
