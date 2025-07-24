@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package trafficupdaterevents.v1;
+
+option go_package = "backend/gen/trafficupdaterevents/v1;trafficupdatereventsv1";
+
+// The TrafficUpdateEventsService defines the streaming endpoint for real-time events.
+service TrafficUpdateEventsService {
+    // StreamTrafficUpdateEvents establishes a grpc-web streaming endpoint that pushes StreamTrafficUpdateEventsResponse messages.
+    rpc StreamTrafficUpdateEvents(StreamTrafficUpdateEventsRequest) returns (stream StreamTrafficUpdateEventsResponse) {}
+}
+
+// Request message for streaming events.
+// This can include filtering options in the future if needed.
+message StreamTrafficUpdateEventsRequest {
+    // Optional filter parameter (e.g., event type or keyword).
+    string filter = 1;
+}
+
+// Represents a real-time event.
+message StreamTrafficUpdateEventsResponse {
+  string id        = 1;   // unique event id
+  int64  timestamp = 2;   // server-side epoch seconds
+
+  // NEW – parsed content
+  repeated TrafficDigestEntry traffic_digest = 3;
+  repeated WeatherSummary     weather        = 4;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Nested message definitions
+// ────────────────────────────────────────────────────────────────
+message TrafficDigestEntry {
+  string timestamp       = 1;
+  string location        = 2;
+  string summary         = 3;
+  string severity_reason = 4;
+  string delay           = 5;
+  string advice          = 6;
+}
+
+message WeatherSummary {
+  string location      = 1;
+  string temperature   = 2;
+  string conditions    = 3;
+  string precipitation = 4;
+  string wind          = 5;
+}
+
+// // Enumeration of possible event types.
+// enum TrafficUpdateEventsType {
+//     // Unspecified event type.
+//     EVENT_TYPE_UNKNOWN_UNSPECIFIED = 0;
+//     EVENT_TYPE_TRAFFIC = 1;
+//     EVENT_TYPE_WASTE = 2;
+//     EVENT_TYPE_ENERGY = 3;
+//     EVENT_TYPE_EMERGENCY = 4;
+// }

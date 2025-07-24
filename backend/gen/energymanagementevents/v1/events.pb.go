@@ -75,10 +75,8 @@ type StreamEnergyManagementEventsResponse struct {
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Timestamp in epoch seconds.
 	Timestamp int64 `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	// // The type of event.
-	// EnergyManagementEventsType type = 3;
-	// Flexible payload containing event details (in JSON format).
-	Payload       string `protobuf:"bytes,4,opt,name=payload,proto3" json:"payload,omitempty"`
+	// NEW – parsed content (replaces the old “payload” string)
+	OutageSummary []*OutageSummaryEntry `protobuf:"bytes,3,rep,name=outage_summary,json=outageSummary,proto3" json:"outage_summary,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -127,9 +125,112 @@ func (x *StreamEnergyManagementEventsResponse) GetTimestamp() int64 {
 	return 0
 }
 
-func (x *StreamEnergyManagementEventsResponse) GetPayload() string {
+func (x *StreamEnergyManagementEventsResponse) GetOutageSummary() []*OutageSummaryEntry {
 	if x != nil {
-		return x.Payload
+		return x.OutageSummary
+	}
+	return nil
+}
+
+// ────────────────────────────────────────────────────────────────
+// Nested message definition
+// ────────────────────────────────────────────────────────────────
+type OutageSummaryEntry struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Timestamp     string                 `protobuf:"bytes,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Locations     []string               `protobuf:"bytes,2,rep,name=locations,proto3" json:"locations,omitempty"`
+	Summary       string                 `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`
+	Severity      string                 `protobuf:"bytes,4,opt,name=severity,proto3" json:"severity,omitempty"`
+	StartTime     string                 `protobuf:"bytes,5,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	EndTime       string                 `protobuf:"bytes,6,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
+	Reason        string                 `protobuf:"bytes,7,opt,name=reason,proto3" json:"reason,omitempty"`
+	Advice        string                 `protobuf:"bytes,8,opt,name=advice,proto3" json:"advice,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OutageSummaryEntry) Reset() {
+	*x = OutageSummaryEntry{}
+	mi := &file_energymanagementevents_v1_events_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OutageSummaryEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OutageSummaryEntry) ProtoMessage() {}
+
+func (x *OutageSummaryEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_energymanagementevents_v1_events_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OutageSummaryEntry.ProtoReflect.Descriptor instead.
+func (*OutageSummaryEntry) Descriptor() ([]byte, []int) {
+	return file_energymanagementevents_v1_events_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *OutageSummaryEntry) GetTimestamp() string {
+	if x != nil {
+		return x.Timestamp
+	}
+	return ""
+}
+
+func (x *OutageSummaryEntry) GetLocations() []string {
+	if x != nil {
+		return x.Locations
+	}
+	return nil
+}
+
+func (x *OutageSummaryEntry) GetSummary() string {
+	if x != nil {
+		return x.Summary
+	}
+	return ""
+}
+
+func (x *OutageSummaryEntry) GetSeverity() string {
+	if x != nil {
+		return x.Severity
+	}
+	return ""
+}
+
+func (x *OutageSummaryEntry) GetStartTime() string {
+	if x != nil {
+		return x.StartTime
+	}
+	return ""
+}
+
+func (x *OutageSummaryEntry) GetEndTime() string {
+	if x != nil {
+		return x.EndTime
+	}
+	return ""
+}
+
+func (x *OutageSummaryEntry) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *OutageSummaryEntry) GetAdvice() string {
+	if x != nil {
+		return x.Advice
 	}
 	return ""
 }
@@ -140,11 +241,21 @@ const file_energymanagementevents_v1_events_proto_rawDesc = "" +
 	"\n" +
 	"&energymanagementevents/v1/events.proto\x12\x19energymanagementevents.v1\"=\n" +
 	"#StreamEnergyManagementEventsRequest\x12\x16\n" +
-	"\x06filter\x18\x01 \x01(\tR\x06filter\"n\n" +
+	"\x06filter\x18\x01 \x01(\tR\x06filter\"\xaa\x01\n" +
 	"$StreamEnergyManagementEventsResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1c\n" +
-	"\ttimestamp\x18\x02 \x01(\x03R\ttimestamp\x12\x18\n" +
-	"\apayload\x18\x04 \x01(\tR\apayload2\xc5\x01\n" +
+	"\ttimestamp\x18\x02 \x01(\x03R\ttimestamp\x12T\n" +
+	"\x0eoutage_summary\x18\x03 \x03(\v2-.energymanagementevents.v1.OutageSummaryEntryR\routageSummary\"\xf0\x01\n" +
+	"\x12OutageSummaryEntry\x12\x1c\n" +
+	"\ttimestamp\x18\x01 \x01(\tR\ttimestamp\x12\x1c\n" +
+	"\tlocations\x18\x02 \x03(\tR\tlocations\x12\x18\n" +
+	"\asummary\x18\x03 \x01(\tR\asummary\x12\x1a\n" +
+	"\bseverity\x18\x04 \x01(\tR\bseverity\x12\x1d\n" +
+	"\n" +
+	"start_time\x18\x05 \x01(\tR\tstartTime\x12\x19\n" +
+	"\bend_time\x18\x06 \x01(\tR\aendTime\x12\x16\n" +
+	"\x06reason\x18\a \x01(\tR\x06reason\x12\x16\n" +
+	"\x06advice\x18\b \x01(\tR\x06advice2\xc5\x01\n" +
 	"\x1dEnergyManagementEventsService\x12\xa3\x01\n" +
 	"\x1cStreamEnergyManagementEvents\x12>.energymanagementevents.v1.StreamEnergyManagementEventsRequest\x1a?.energymanagementevents.v1.StreamEnergyManagementEventsResponse\"\x000\x01B@Z>backend/gen/energymanagementevents/v1;energymanagementeventsv1b\x06proto3"
 
@@ -160,19 +271,21 @@ func file_energymanagementevents_v1_events_proto_rawDescGZIP() []byte {
 	return file_energymanagementevents_v1_events_proto_rawDescData
 }
 
-var file_energymanagementevents_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_energymanagementevents_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_energymanagementevents_v1_events_proto_goTypes = []any{
 	(*StreamEnergyManagementEventsRequest)(nil),  // 0: energymanagementevents.v1.StreamEnergyManagementEventsRequest
 	(*StreamEnergyManagementEventsResponse)(nil), // 1: energymanagementevents.v1.StreamEnergyManagementEventsResponse
+	(*OutageSummaryEntry)(nil),                   // 2: energymanagementevents.v1.OutageSummaryEntry
 }
 var file_energymanagementevents_v1_events_proto_depIdxs = []int32{
-	0, // 0: energymanagementevents.v1.EnergyManagementEventsService.StreamEnergyManagementEvents:input_type -> energymanagementevents.v1.StreamEnergyManagementEventsRequest
-	1, // 1: energymanagementevents.v1.EnergyManagementEventsService.StreamEnergyManagementEvents:output_type -> energymanagementevents.v1.StreamEnergyManagementEventsResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	2, // 0: energymanagementevents.v1.StreamEnergyManagementEventsResponse.outage_summary:type_name -> energymanagementevents.v1.OutageSummaryEntry
+	0, // 1: energymanagementevents.v1.EnergyManagementEventsService.StreamEnergyManagementEvents:input_type -> energymanagementevents.v1.StreamEnergyManagementEventsRequest
+	1, // 2: energymanagementevents.v1.EnergyManagementEventsService.StreamEnergyManagementEvents:output_type -> energymanagementevents.v1.StreamEnergyManagementEventsResponse
+	2, // [2:3] is the sub-list for method output_type
+	1, // [1:2] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_energymanagementevents_v1_events_proto_init() }
@@ -186,7 +299,7 @@ func file_energymanagementevents_v1_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_energymanagementevents_v1_events_proto_rawDesc), len(file_energymanagementevents_v1_events_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
