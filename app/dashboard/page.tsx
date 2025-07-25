@@ -280,7 +280,7 @@ const LiveFeed = ({
                       <p className="text-sm text-gray-400">{item.summary}</p>
                       {item.advice && (
                         <p className="text-sm text-blue-400">
-                          Adivce: {item.advice}
+                          Advice: {item.advice}
                         </p>
                       )}
                     </div>
