@@ -37,7 +37,7 @@ import Geofence from "@/components/dashboard/geofence";
 import { useSummaryStream } from "@/hooks/use-summary-stream";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTrafficEventsStream } from "@/hooks/use-traffic-events-stream";
-import { useEnergyEventsStream } from "@/hooks/use-energy-events-stream";
+import { OutageSummaryEntry, useEnergyEventsStream } from "@/hooks/use-energy-events-stream";
 
 // Type imports
 import type {
@@ -188,7 +188,6 @@ const categoryDetails: {
   Traffic: { icon: TrafficCone, color: "bg-indigo-500/20 text-indigo-400" },
   Power: { icon: Wrench, color: "bg-pink-500/20 text-pink-400" },
   Weather: { icon: PartyPopper, color: "bg-purple-500/20 text-purple-400" },
-  Emergency: { icon: AlertTriangle, color: "bg-blue-500/20 text-blue-400" },
 };
 
 const severityDetails: {
@@ -201,18 +200,61 @@ const severityDetails: {
 };
 
 const LiveFeed = ({
-  items,
+  trafficEvents,
+  weatherEvents,
+  energyEvents,
   filter,
   setFilter,
 }: {
-  items: FeedItem[];
+  trafficEvents: TrafficDigestEntry[];
+  weatherEvents: WeatherSummary[];
+  energyEvents: OutageSummaryEntry[];
   filter: string;
   setFilter: (f: string) => void;
 }) => {
+  const mappedTraffic: FeedItem[] = trafficEvents.map((t, idx) => ({
+    id: Date.now() + idx,
+    category: "Traffic",
+    location: t.location,
+    title: `Delay of ${t.delay} at ${t.location}`,
+    summary: t.summary,
+    severity: t.severityReason.split(";")[0].trim(),
+    advice: t.advice,
+  }));
+
+  const mappedWeather: FeedItem[] = weatherEvents.map((w, idx) => ({
+    id: Date.now() + trafficEvents.length + idx,
+    category: "Weather",
+    location: w.location,
+    title: `Weather in ${w.location}`,
+    summary: w.conditions,
+    severity: `${w.precipitation} Precipitation`,
+    advice: "",
+  }));
+
+  const mappedEnergy: FeedItem[] = energyEvents.map((e, idx) => {
+    const summaryLocation =
+      e.locations[
+        e.locations.findIndex((location) => e.locations.includes(location))
+      ];
+    return {
+      id: Date.now() + trafficEvents.length + weatherEvents.length + idx,
+      category: "Power",
+      location: summaryLocation,
+      title: `${e.reason} in ${summaryLocation}`,
+      summary: e.summary,
+      severity: `${e.severity} Severity`,
+      advice: e.advice,
+    };
+  });
+
+  const items = [...mappedTraffic, ...mappedWeather, ...mappedEnergy];
+
   const filteredItems =
     filter === "All Categories"
       ? items
       : items.filter((item) => item.category === filter);
+
   return (
     <Card className="bg-[#111113] border-gray-800 h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -361,50 +403,6 @@ export default function DashboardPage() {
   const energyEvents = useEnergyEventsStream();
   const [trafficEvents, weatherEvents] = useTrafficEventsStream();
 
-  const mappedTraffic: FeedItem[] = trafficEvents.map((t) => ({
-    id: new Date().getTime(),
-    category: "Traffic",
-    location: t.location,
-    title: `Delay of ${t.delay} at ${t.location}`,
-    summary: t.summary,
-    severity: t.severityReason.split(";")[0].trim(),
-    advice: t.advice,
-  }));
-
-  const mappedWeather: FeedItem[] = weatherEvents.map((w) => ({
-    id: new Date().getTime(),
-    category: "Weather",
-    location: w.location,
-    title: `Weather in ${w.location}`,
-    summary: w.conditions,
-    severity: `${w.precipitation} Precipitation`,
-    advice: "",
-  }));
-
-  const mappedEnergy: FeedItem[] = energyEvents.map((e) => {
-    const summaryLocation =
-      e.locations[
-        e.locations.findIndex((location) => e.locations.includes(location))
-      ];
-    return {
-      id: new Date().getTime(),
-      category: "Power",
-      location: summaryLocation,
-      title: `${e.reason} in ${summaryLocation}`,
-      summary: e.summary,
-      severity: `${e.severity} Severity`,
-      advice: e.advice,
-    };
-  });
-
-  useEffect(() => {
-    setFeedItems([
-      ...mappedTraffic,
-      ...mappedWeather,
-      ...mappedEnergy,
-    ]);
-  }, [mappedTraffic, mappedWeather, mappedEnergy]);
-
   return (
     <div className="min-h-screen flex flex-col bg-[#09090B]">
       <AppHeader activePage="Dashboard" />
@@ -436,7 +434,9 @@ export default function DashboardPage() {
           </div>
           <div className="lg:col-span-1 h-[60vh] min-h-[500px]">
             <LiveFeed
-              items={feedItems}
+              trafficEvents={trafficEvents}
+              weatherEvents={weatherEvents}
+              energyEvents={energyEvents}
               filter={feedFilter}
               setFilter={setFeedFilter}
             />
