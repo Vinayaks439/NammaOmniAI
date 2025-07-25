@@ -18,6 +18,11 @@ export default function Geofence({ center, areas, setCenter, setAreas}: Geofence
   const rectRef = useRef<any>(null)
   const geocoderRef = useRef<any>(null)
   const mapInstanceRef = useRef<any>(null)
+  // URL of the raw YAML containing pothole data
+  const POTHOLE_YAML_URL = "https://gist.githubusercontent.com/warlockdn/0b7ec8ca726075c58d8423ec17cf806a/raw/bmap.yaml";
+
+  // Keep track of pothole markers so we can clear/re-render if needed
+  const potholeMarkersRef = useRef<any[]>([]);
 
   // Helper functions
   function metersToLat(m: number) { return m / 111320 }
@@ -141,6 +146,61 @@ export default function Geofence({ center, areas, setCenter, setAreas}: Geofence
     })
     const trafficLayer = new (window as any).google.maps.TrafficLayer();
     trafficLayer.setMap(map);
+
+    // ─────────────── Pothole Markers ───────────────
+    async function loadPotholeMarkers() {
+      try {
+        // load js-yaml if not present
+        let yaml: any = (window as any).jsyaml;
+        if (!yaml) {
+          await new Promise<void>((resolve, reject) => {
+            const s = document.createElement("script");
+            s.src = "https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js";
+            s.async = true;
+            s.onload = () => resolve();
+            s.onerror = () => reject();
+            document.body.appendChild(s);
+          });
+          yaml = (window as any).jsyaml;
+        }
+
+        const resp = await fetch(POTHOLE_YAML_URL);
+        if (!resp.ok) throw new Error("Failed to download pothole data");
+        const text = await resp.text();
+        const parsed = yaml.load(text);
+        if (!parsed || !Array.isArray(parsed.data)) return;
+
+        // clear previous markers
+        potholeMarkersRef.current.forEach((m) => m.setMap(null));
+        potholeMarkersRef.current = [];
+
+        parsed.data.forEach((entry: any) => {
+          if (typeof entry.lat !== "number" || typeof entry.long !== "number") return;
+          const marker = new (window as any).google.maps.Marker({
+            position: { lat: entry.lat, lng: entry.long },
+            map,
+            title: "Pothole",
+            icon: {
+              url: "https://maps.gstatic.com/mapfiles/ms2/micons/red-dot.png",
+              scaledSize: new (window as any).google.maps.Size(32, 32),
+            },
+          });
+
+          if (entry.image || entry.image_thumb) {
+            const iw = new (window as any).google.maps.InfoWindow({
+              content: `<img src="${entry.image_thumb || entry.image}" style="max-width:200px;max-height:150px;"/>`,
+            });
+            marker.addListener("click", () => iw.open({ anchor: marker, map }));
+          }
+
+          potholeMarkersRef.current.push(marker);
+        });
+      } catch (err) {
+        console.warn("Error loading pothole markers", err);
+      }
+    }
+
+    loadPotholeMarkers();
     mapInstanceRef.current = map
     geocoderRef.current = new (window as any).google.maps.Geocoder()
     // Draggable, editable square
