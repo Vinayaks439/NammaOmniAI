@@ -112,7 +112,7 @@ export function useSummaryStream(
       controller.abort()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lat, long, JSON.stringify(areas)])
+  }, [areas])
 
   return summary
 } 
