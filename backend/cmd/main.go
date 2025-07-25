@@ -135,6 +135,7 @@ func (s *summaryServer) StreamSummary(
 		}
 
 		prompt := systemPrompt + "\n\n" + latestEnergy + "\n" + latestTraffic
+		fmt.Println("prompt to gemini", prompt)
 		resp, err := genClient.Models.GenerateContent(ctx, cfg.Model, genai.Text(prompt), nil)
 		if err != nil {
 			return err
@@ -158,7 +159,7 @@ func (s *summaryServer) StreamSummary(
 			model,        // model not used
 			systemPrompt, // prompt not used
 			func(text string) error {
-				log.Printf("ENERGY raw: %d bytes", len(text))
+				log.Printf("ENERGY raw: %d bytes, %s", len(text), text)
 				mu.Lock()
 				latestEnergy = text
 				mu.Unlock()
@@ -180,7 +181,7 @@ func (s *summaryServer) StreamSummary(
 			model,        // model not used
 			systemPrompt, // prompt not used
 			func(text string) error {
-				log.Printf("TRAFFIC raw: %d bytes", len(text))
+				log.Printf("TRAFFIC raw: %d bytes, %s", len(text), text)
 				mu.Lock()
 				latestTraffic = text
 				mu.Unlock()
