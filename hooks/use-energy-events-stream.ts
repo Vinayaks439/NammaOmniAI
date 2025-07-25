@@ -40,7 +40,7 @@ export interface StreamEnergyManagementEventsResponse {
   outage_summary: OutageSummaryEntry[]
 }
 
-export function useEnergyEventsStream(filter = "") {
+export function useEnergyEventsStream(center: { lat: number, lng: number }) {
   const [energyEvents, setEnergyEvents] = useState<OutageSummaryEntry[]>([])
   const abortRef = useRef<AbortController | null>(null)
 
@@ -52,7 +52,7 @@ export function useEnergyEventsStream(filter = "") {
       (process.env.NEXT_PUBLIC_GRPC_HOST || "http://localhost:8080") +
       "/energymanagementevents.v1.EnergyManagementEventsService/StreamEnergyManagementEvents"
 
-    const frame = buildConnectFrame({ filter })
+    const frame = buildConnectFrame({ })
     const reqBody = frame.buffer.slice(frame.byteOffset, frame.byteOffset + frame.byteLength) as ArrayBuffer
 
     fetch(endpoint, {
@@ -124,7 +124,7 @@ export function useEnergyEventsStream(filter = "") {
     return () => {
       controller.abort()
     }
-  }, [filter])
+  }, [center])
 
   return energyEvents
 } 

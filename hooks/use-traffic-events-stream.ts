@@ -48,7 +48,7 @@ export interface StreamTrafficUpdateEventsResponse {
 }
 
 export function useTrafficEventsStream(
-  filter = "",
+  center: { lat: number, lng: number }
 ): [TrafficDigestEntry[], WeatherSummary[]] {
   const [trafficEvents, setTrafficEvents] = useState<TrafficDigestEntry[]>([])
   const [weatherEvents, setWeatherEvents] = useState<WeatherSummary[]>([])
@@ -62,7 +62,7 @@ export function useTrafficEventsStream(
       (process.env.NEXT_PUBLIC_GRPC_HOST || "http://localhost:8080") +
       "/trafficupdaterevents.v1.TrafficUpdateEventsService/StreamTrafficUpdateEvents"
 
-    const frame = buildConnectFrame({ filter })
+    const frame = buildConnectFrame({ })
     const reqBody = frame.buffer.slice(frame.byteOffset, frame.byteOffset + frame.byteLength) as ArrayBuffer
 
     fetch(endpoint, {
@@ -146,7 +146,7 @@ export function useTrafficEventsStream(
     return () => {
       controller.abort()
     }
-  }, [filter])
+  }, [center])
 
   return [trafficEvents, weatherEvents];
 } 

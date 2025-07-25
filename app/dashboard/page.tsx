@@ -400,8 +400,8 @@ export default function DashboardPage() {
   const [feedFilter, setFeedFilter] = useState("All Categories");
 
   const summary = useSummaryStream(center.lat, center.lng, areas);
-  const energyEvents = useEnergyEventsStream();
-  const [trafficEvents, weatherEvents] = useTrafficEventsStream();
+  const energyEvents = useEnergyEventsStream(center);
+  const [trafficEvents, weatherEvents] = useTrafficEventsStream(center);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#09090B]">
