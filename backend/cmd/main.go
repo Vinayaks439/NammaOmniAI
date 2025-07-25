@@ -34,6 +34,7 @@ import (
 
 const (
 	gcpProjectID = "namm-omni-dev"
+	model        = "gemini-2.5-pro"
 )
 
 func withCORS(h http.Handler) http.Handler {
@@ -154,8 +155,8 @@ func (s *summaryServer) StreamSummary(
 		defer cancelEnergy()
 		summ := internal.NewSummarizer(
 			energyCh,
-			"", // model not used
-			"", // prompt not used
+			model,        // model not used
+			systemPrompt, // prompt not used
 			func(text string) error {
 				log.Printf("ENERGY raw: %d bytes", len(text))
 				mu.Lock()
@@ -176,8 +177,8 @@ func (s *summaryServer) StreamSummary(
 		defer cancelTraffic()
 		summ := internal.NewSummarizer(
 			trafficCh,
-			"",
-			"",
+			model,        // model not used
+			systemPrompt, // prompt not used
 			func(text string) error {
 				log.Printf("TRAFFIC raw: %d bytes", len(text))
 				mu.Lock()
@@ -191,6 +192,22 @@ func (s *summaryServer) StreamSummary(
 
 	// Wait for any goroutine to error or for ctx cancel.
 	return g.Wait()
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// helper: tolerant JSON decoder
+// ─────────────────────────────────────────────────────────────────────────────
+func safeUnmarshal(data []byte, v any) error {
+	// 1st attempt – data is the expected JSON
+	if err := json.Unmarshal(data, v); err == nil {
+		return nil
+	}
+	// 2nd attempt – data itself is a quoted JSON string
+	var quoted string
+	if err := json.Unmarshal(data, &quoted); err != nil {
+		return err
+	}
+	return json.Unmarshal([]byte(quoted), v)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -220,9 +237,9 @@ func (s *energyManagementEventsServer) StreamEnergyManagementEvents(
 		Reason    string   `json:"reason"`
 		Advice    string   `json:"advice"`
 	}
-	type rawPayload struct {
-		OutageSummary []rawOutage `json:"outage_summary"`
-	}
+
+	// Generic top-level container
+	type rawPayload map[string]json.RawMessage
 
 	for {
 		select {
@@ -239,10 +256,18 @@ func (s *energyManagementEventsServer) StreamEnergyManagementEvents(
 			}
 
 			var parsed rawPayload
-			if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
+			if err := safeUnmarshal([]byte(raw), &parsed); err != nil {
 				// log the error and skip malformed messages
 				log.Printf("JSON parsing error: %v. Raw data: %s", err, raw)
 				continue
+			}
+
+			var outages []rawOutage
+			if rm, ok := parsed["outage_summary"]; ok {
+				if err := safeUnmarshal(rm, &outages); err != nil {
+					log.Printf("JSON parsing error for outage_summary: %v", err)
+					continue
+				}
 			}
 
 			resp := &energymanagementeventsv1.StreamEnergyManagementEventsResponse{
@@ -250,7 +275,7 @@ func (s *energyManagementEventsServer) StreamEnergyManagementEvents(
 				Timestamp: time.Now().Unix(),
 			}
 
-			for _, o := range parsed.OutageSummary {
+			for _, o := range outages {
 				resp.OutageSummary = append(
 					resp.OutageSummary,
 					&energymanagementeventsv1.OutageSummaryEntry{
@@ -299,17 +324,17 @@ func (s *trafficUpdateEventsServer) StreamTrafficUpdateEvents(
 			Wind          string `json:"wind"`
 		} `json:"weather_summary"`
 	}
-	type rawPayload struct {
-		BengaluruTrafficDigest []struct {
-			Timestamp      string `json:"timestamp"`
-			Location       string `json:"location"`
-			Summary        string `json:"summary"`
-			SeverityReason string `json:"severity_reason"`
-			Delay          string `json:"delay"`
-			Advice         string `json:"advice"`
-		} `json:"bengaluru_traffic_digest"`
-		LocationWeather []rawWeather `json:"location_weather"`
+	type rawDigest struct {
+		Timestamp      string `json:"timestamp"`
+		Location       string `json:"location"`
+		Summary        string `json:"summary"`
+		SeverityReason string `json:"severity_reason"`
+		Delay          string `json:"delay"`
+		Advice         string `json:"advice"`
 	}
+
+	// Generic container
+	type rawPayload map[string]json.RawMessage
 
 	for {
 		select {
@@ -326,10 +351,19 @@ func (s *trafficUpdateEventsServer) StreamTrafficUpdateEvents(
 			}
 
 			var parsed rawPayload
-			if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
+			if err := safeUnmarshal([]byte(raw), &parsed); err != nil {
 				log.Printf("Failed to parse JSON payload: %v. Raw data: %s", err, raw)
 				// skip malformed payloads
 				continue
+			}
+
+			var digests []rawDigest
+			var weathers []rawWeather
+			if rm, ok := parsed["bengaluru_traffic_digest"]; ok {
+				_ = safeUnmarshal(rm, &digests) // log on error if desired
+			}
+			if rm, ok := parsed["location_weather"]; ok {
+				_ = safeUnmarshal(rm, &weathers)
 			}
 
 			resp := &trafficupdatereventsv1.StreamTrafficUpdateEventsResponse{
@@ -337,7 +371,7 @@ func (s *trafficUpdateEventsServer) StreamTrafficUpdateEvents(
 				Timestamp: time.Now().Unix(),
 			}
 
-			for _, d := range parsed.BengaluruTrafficDigest {
+			for _, d := range digests {
 				resp.TrafficDigest = append(resp.TrafficDigest, &trafficupdatereventsv1.TrafficDigestEntry{
 					Timestamp:      d.Timestamp,
 					Location:       d.Location,
@@ -347,7 +381,7 @@ func (s *trafficUpdateEventsServer) StreamTrafficUpdateEvents(
 					Advice:         d.Advice,
 				})
 			}
-			for _, w := range parsed.LocationWeather {
+			for _, w := range weathers {
 				resp.Weather = append(resp.Weather, &trafficupdatereventsv1.WeatherSummary{
 					Location:      w.WeatherSummary.Location,
 					Temperature:   w.WeatherSummary.Temperature,
