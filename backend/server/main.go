@@ -51,7 +51,12 @@ func main() {
 	})
 
 	api.GET("/reports", func(c *gin.Context) {
-		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+		limitStr := c.DefaultQuery("limit", "20")
+		limit, err := strconv.Atoi(limitStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'limit' parameter. Must be a valid integer."})
+			return
+		}
 		user := c.Query("user_id")
 		reports, err := dbClient.ListPotholeReports(c, limit, user)
 		if err != nil {
