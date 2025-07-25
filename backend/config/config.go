@@ -28,7 +28,7 @@ func Load() (*SummaryConfig, error) {
 
 	// Defaults
 	v.SetDefault("prompt", "Summarise the following data in one sentence:")
-	v.SetDefault("model", "gemini-2.5-flash")
+	v.SetDefault("model", "gemini-2.5-pro")
 	v.SetDefault("pubsub_subscription_ids", []string{"energy-management-data-sub", "traffic-update-data-sub"})
 
 	// Read file if available
