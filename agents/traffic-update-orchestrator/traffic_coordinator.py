@@ -21,7 +21,7 @@ from sub_agents.social_media.agent import social_media_agent
 from sub_agents.weather.agent import weather_agent
 import prompt
 
-MODEL = "gemini-2.5-flash"
+MODEL = "gemini-2.5-pro"
 
 warnings.filterwarnings("ignore", message="there are non-text parts in the response:")
 

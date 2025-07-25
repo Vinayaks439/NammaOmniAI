@@ -42,8 +42,10 @@ import { useEnergyEventsStream } from "@/hooks/use-energy-events-stream";
 // Type imports
 import type {
   TrafficDigestEntry,
-  LocationWeatherEntry,
 } from "@/hooks/use-traffic-events-stream";
+
+// Type import (optional – only needed if you reference the type explicitly)
+import type { WeatherSummary } from "@/hooks/use-traffic-events-stream";
 
 // ────────────────────────────────────────────────────────────────
 // Unified feed item shape
@@ -365,17 +367,17 @@ export default function DashboardPage() {
     location: t.location,
     title: `Delay of ${t.delay} at ${t.location}`,
     summary: t.summary,
-    severity: t.severity_reason.split(";")[0].trim(),
+    severity: t.severityReason.split(";")[0].trim(),
     advice: t.advice,
   }));
 
   const mappedWeather: FeedItem[] = weatherEvents.map((w) => ({
     id: new Date().getTime(),
     category: "Weather",
-    location: w.weather_summary.location,
-    title: `Weather in ${w.weather_summary.location}`,
-    summary: w.weather_summary.conditions,
-    severity: `${w.weather_summary.precipitation} Precipitation`,
+    location: w.location,
+    title: `Weather in ${w.location}`,
+    summary: w.conditions,
+    severity: `${w.precipitation} Precipitation`,
     advice: "",
   }));
 
@@ -396,8 +398,12 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
-    setFeedItems([...mappedTraffic, ...mappedWeather, ...mappedEnergy]);
-  }, []);
+    setFeedItems([
+      ...mappedTraffic,
+      ...mappedWeather,
+      ...mappedEnergy,
+    ]);
+  }, [mappedTraffic, mappedWeather, mappedEnergy]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#09090B]">

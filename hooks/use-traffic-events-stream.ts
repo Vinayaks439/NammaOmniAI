@@ -27,7 +27,7 @@ export interface TrafficDigestEntry {
   timestamp: string
   location: string
   summary: string
-  severity_reason: string
+  severityReason: string   // ← camel-case exactly as it comes off the wire
   delay: string
   advice: string
 }
@@ -40,20 +40,18 @@ export interface WeatherSummary {
   wind: string
 }
 
-export interface LocationWeatherEntry {
-  weather_summary: WeatherSummary;
-}
-
 export interface StreamTrafficUpdateEventsResponse {
   id: string
   timestamp: number
   bengaluru_traffic_digest: TrafficDigestEntry[]
-  location_weather: LocationWeatherEntry[]
+  location_weather: WeatherSummary[]
 }
 
-export function useTrafficEventsStream(filter = ""): [TrafficDigestEntry[], LocationWeatherEntry[]] {
+export function useTrafficEventsStream(
+  filter = "",
+): [TrafficDigestEntry[], WeatherSummary[]] {
   const [trafficEvents, setTrafficEvents] = useState<TrafficDigestEntry[]>([])
-  const [weatherEvents, setWeatherEvents] = useState<LocationWeatherEntry[]>([])
+  const [weatherEvents, setWeatherEvents] = useState<WeatherSummary[]>([])
   const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
@@ -110,12 +108,22 @@ export function useTrafficEventsStream(filter = ""): [TrafficDigestEntry[], Loca
                 const text = decoder.decode(msgBytes)
                 try {
                   const json = JSON.parse(text)
-                  if (json.bengaluru_traffic_digest) {
-                    setTrafficEvents((prev) => [...prev, ...(json.bengaluru_traffic_digest as TrafficDigestEntry[])])
+
+                  // ───── CHANGE #1 – use current field names ─────
+                  if (json.trafficDigest && Array.isArray(json.trafficDigest)) {
+                    setTrafficEvents(prev => [
+                      ...prev,
+                      ...(json.trafficDigest as TrafficDigestEntry[]),
+                    ])
                   }
-                  if (json.location_weather) {
-                    setWeatherEvents((prev) => [...prev, ...(json.location_weather as LocationWeatherEntry[])])
+
+                  if (json.weather && Array.isArray(json.weather)) {
+                    setWeatherEvents(prev => [
+                      ...prev,
+                      ...(json.weather as WeatherSummary[]),
+                    ])
                   }
+                  // ───────────────────────────────────────────────
                 } catch (e) {
                   console.warn("Invalid JSON frame", e)
                 }
