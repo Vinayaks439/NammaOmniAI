@@ -6,7 +6,7 @@ import subprocess
 import glob
 from google.adk import Agent
 from google.adk.tools.agent_tool import AgentTool
-from .prompt import POTHOLE_AGENT_PROMPT
+from . import prompt
 
 MODEL = "gemini-2.5-pro"
 
@@ -47,7 +47,7 @@ def run_pothole_street_view(location: str, samples: int = 8) -> dict:
 pothole_agent = Agent(
     model=MODEL,
     name="pothole_agent",
-    instruction=POTHOLE_AGENT_PROMPT,
+    instruction=prompt.POTHOLE_AGENT_PROMPT,
     output_key="pothole_validation_result",
     tools=[
         # AgentTool expects 'agent' rather than 'tool' kwarg, so wrap as a sub-agent

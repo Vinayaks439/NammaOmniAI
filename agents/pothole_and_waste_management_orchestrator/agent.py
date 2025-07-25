@@ -19,9 +19,9 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
-from .sub_agents.analysis.agent import analysis_agent
-from .sub_agents.pothole_street_view.agent import pothole_agent
-from .prompt import POTHOLE_COORDINATOR_PROMPT
+from sub_agents.analysis.agent import analysis_agent
+from sub_agents.pothole_street_view.agent import pothole_agent
+from prompt import POTHOLE_COORDINATOR_PROMPT
 
 # --- enable debug logging for ADK internals and agent/tool events ---
 logging.getLogger("google.adk").setLevel(logging.DEBUG)

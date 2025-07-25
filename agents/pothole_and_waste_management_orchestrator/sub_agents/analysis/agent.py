@@ -2,8 +2,8 @@
 """Analysis agent for pothole detection: extracts GPS from image and judges clarity/pothole presence."""
 
 from google.adk import Agent
-from .prompt import ANALYSIS_AGENT_PROMPT
-from .exif_latlong_extractor import extract_exif_lat_lng
+from . import prompt
+from . import exif_latlong_extractor
 
 MODEL = "gemini-2.5-pro"
 
@@ -11,7 +11,7 @@ MODEL = "gemini-2.5-pro"
 analysis_agent = Agent(
     model=MODEL,
     name="analysis_agent",
-    instruction=ANALYSIS_AGENT_PROMPT,  # Uses EXIF and lat/lng inputs
+    instruction=prompt.ANALYSIS_AGENT_PROMPT,  # Uses EXIF and lat/lng inputs
     output_key="analysis_result",
-    tools=[extract_exif_lat_lng],  # EXIF tool to pull GPS from uploaded image
+    tools=[exif_latlong_extractor.extract_exif_lat_lng],  # EXIF tool to pull GPS from uploaded image
 )
