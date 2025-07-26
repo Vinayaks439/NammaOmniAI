@@ -27,7 +27,7 @@ import logging
 from typing import Any, Dict
 
 import google.cloud.logging
-from pothole_orchestrator import get_pothole_detection
+from pothole_coordinator import get_pothole_detection
 from pubsub import publish_messages  # project‑local helper
 
 PROJECT_ID = "namm-omni-dev"
@@ -54,11 +54,11 @@ def runPotholeDetectionAgent(cloudevent: Any) -> tuple[str, int]:
     `get_pothole_detection`, then publishes the structured result JSON.
     """
     # ── Decode Pub/Sub message ───────────────────────────────────────────────
+    logger.info("cloud event data type: %s", type(cloudevent.data))
+    logger.info("Received cloudevent data: %s", cloudevent.data)
     try:
-        msg_b64: str = cloudevent.data["message"]["data"]
-        payload: Dict[str, Any] = json.loads(
-            base64.b64decode(msg_b64).decode("utf-8")
-        )
+       message = base64.b64decode(cloudevent.data["message"]["data"]).decode("utf-8")
+       payload = json.loads(message)
     except (KeyError, ValueError, json.JSONDecodeError) as exc:
         logger.error("Malformed CloudEvent: %s", exc)
         return "Bad Request", 400
@@ -102,7 +102,7 @@ def runPotholeDetectionAgent(cloudevent: Any) -> tuple[str, int]:
 
     # ── Call the orchestrator ───────────────────────────────────────────────
     try:
-        detection = get_pothole_detection(raw_input)
+        detection = get_pothole_detection(example_prompt)
     except Exception as exc:  # pragma: no cover
         logger.exception("Coordinator error: %s", exc)
         return "Internal Server Error", 500
