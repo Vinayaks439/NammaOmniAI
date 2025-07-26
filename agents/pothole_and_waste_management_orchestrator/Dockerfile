@@ -8,7 +8,7 @@
 #   locally, on Cloud Functions (2nd gen) or Cloud Run
 # ──────────────────────────────────────────────────────────────────────────────
 
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 # Recommended: prevent Python from buffering stdout/stderr so logs appear immediately
 ENV PYTHONUNBUFFERED=1 \
@@ -23,7 +23,7 @@ RUN apt-get update && \
 # ── Copy requirements and install ────────────────────────────────────────────
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 # ── Copy the rest of the source code ─────────────────────────────────────────
 COPY . .
