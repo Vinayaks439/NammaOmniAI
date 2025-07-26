@@ -26,6 +26,8 @@ import uuid
 import warnings
 from typing import Any, Optional, List
 
+from concurrent.futures import ThreadPoolExecutor 
+
 from google.adk.agents import LlmAgent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -36,6 +38,8 @@ from pydantic import BaseModel, Field, field_validator
 from sub_agents.analysis.agent import analysis_agent
 from sub_agents.pothole_street_view.agent import pothole_agent
 from prompt import POTHOLE_COORDINATOR_PROMPT
+
+_executor = ThreadPoolExecutor(max_workers=1)
 
 # ── Logging / warnings ───────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
@@ -121,5 +125,17 @@ async def _run_and_clean(user_input: str) -> PotholeDetectionOutput:
 
 # Public, synchronous wrapper (same shape as get_traffic_digest)
 def get_pothole_detection(user_input: str) -> PotholeDetectionOutput:
-    """Blocking convenience wrapper for callers that aren’t async‑aware."""
-    return asyncio.run(_run_and_clean(user_input))
+    """
+    Thread‑safe wrapper that works whether or not an event loop
+    is already running (e.g. inside Cloud Run).
+    """
+    async def _runner():
+        return await _run_and_clean(user_input)
+
+    try:
+        loop = asyncio.get_running_loop()
+        # If we’re already inside a loop, off‑load to a worker thread
+        return _executor.submit(lambda: asyncio.run(_runner())).result()
+    except RuntimeError:
+        # No event loop yet – safe to start one normally
+        return asyncio.run(_runner())

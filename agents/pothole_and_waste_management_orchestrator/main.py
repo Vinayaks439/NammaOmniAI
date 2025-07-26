@@ -27,7 +27,7 @@ import logging
 from typing import Any, Dict
 
 import google.cloud.logging
-from pothole_orchestrator import get_pothole_detection
+from pothole_coordinator import get_pothole_detection
 from pubsub import publish_messages  # project‑local helper
 
 PROJECT_ID = "namm-omni-dev"
