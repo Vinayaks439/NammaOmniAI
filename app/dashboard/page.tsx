@@ -248,7 +248,6 @@ const LiveFeed = ({
     venue: c.venue,
     price: c.price,
     link: c.link,
-    description: c.description,
     severity: "",
     advice: "",
   }));
