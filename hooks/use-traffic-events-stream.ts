@@ -117,11 +117,58 @@ export function useTrafficEventsStream(
                     ])
                   }
 
+                  // Alternative snake_case used by backend
+                  if (json.bengaluru_traffic_digest && Array.isArray(json.bengaluru_traffic_digest)) {
+                    setTrafficEvents(prev => [
+                      ...prev,
+                      ...(json.bengaluru_traffic_digest as TrafficDigestEntry[]),
+                    ])
+                  }
+
+                  if (json.bengaluruTrafficDigest && Array.isArray(json.bengaluruTrafficDigest)) {
+                    setTrafficEvents(prev => [
+                      ...prev,
+                      ...(json.bengaluruTrafficDigest as TrafficDigestEntry[]),
+                    ])
+                  }
+
                   if (json.weather && Array.isArray(json.weather)) {
                     setWeatherEvents(prev => [
                       ...prev,
                       ...(json.weather as WeatherSummary[]),
                     ])
+                  }
+                  // Support alternative field names used by backend (locationWeather / location_weather)
+                  if (json.locationWeather && Array.isArray(json.locationWeather)) {
+                    setWeatherEvents(prev => [
+                      ...prev,
+                      ...(json.locationWeather as WeatherSummary[]),
+                    ])
+                  }
+
+                  if (json.location_weather) {
+                    let parsed: any = json.location_weather
+                    // If the field is a JSON-encoded string, parse it first
+                    if (typeof parsed === "string") {
+                      try {
+                        parsed = JSON.parse(parsed)
+                      } catch {
+                        // fallback: attempt to convert single quotes to double quotes
+                        try {
+                          const dbl = parsed.replace(/'/g, '"')
+                          parsed = JSON.parse(dbl)
+                        } catch {
+                          parsed = null
+                        }
+                      }
+                    }
+                    if (parsed && Array.isArray(parsed)) {
+                      // Some backends nest the summary under `weather_summary`
+                      const summaries: WeatherSummary[] = parsed.map((w: any) =>
+                        w.weather_summary ?? w.weatherSummary ?? w,
+                      )
+                      setWeatherEvents(prev => [...prev, ...summaries])
+                    }
                   }
                   // ───────────────────────────────────────────────
                 } catch (e) {

@@ -34,9 +34,13 @@ def run_energy_management_agent(cloudevent):
         "and reliable local news reports."
     )
     digest = get_energy_digest(example_prompt)
-    payload = json.dumps(digest.model_dump(), indent=2)
+    try:
+        payload = json.dumps(digest.model_dump(), indent=2)
+    except json.JSONDecodeError:
+        logging.error("Unable to parse model response, publishing digest %s",digest.model_dump())
+        publish_messages(digest.model_dump(),lambda e: logger.error("Pub/Sub error: %s, e"))
+        return '',200
     logger.info("Energy digest generated:\n%s", payload)
-
     # Publish to Pub/Sub (comment out if running locally without GCP creds)
     try:
         publish_messages(payload, lambda e: logger.error("Pub/Sub error: %s", e))

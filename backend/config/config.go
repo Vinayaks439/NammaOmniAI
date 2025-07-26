@@ -18,7 +18,9 @@ func Load() (*SummaryConfig, error) {
 	v := viper.New()
 
 	v.SetConfigName("prompt") // looks for prompt.yaml|json|toml
-	v.AddConfigPath("./config")
+	v.AddConfigPath("./backend/config")
+	v.AddConfigPath("../backend")
+	v.AddConfigPath("./backend")
 	v.AddConfigPath(".")
 
 	v.SetConfigType("yaml") // default type if file provided

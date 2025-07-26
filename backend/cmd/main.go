@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -15,6 +14,7 @@ import (
 	"connectrpc.com/connect"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+	"gopkg.in/yaml.v3"
 
 	summaryv1 "backend/gen/summary/v1"
 	summaryv1connect "backend/gen/summary/v1/summaryv1connect"
@@ -69,11 +69,12 @@ func (s *summaryServer) StreamSummary(
 	}
 
 	// Attempt to load richer system prompt from prompt.yaml (optional)
-	promptBytes, errPrompt := ioutil.ReadFile("backend/prompt.yaml")
+	promptBytes, errPrompt := os.ReadFile("../prompt.yaml")
+	fmt.Println(promptBytes)
 	var systemPrompt string
 	if errPrompt == nil {
 		var m map[string]interface{}
-		if err := json.Unmarshal(promptBytes, &m); err == nil {
+		if err := yaml.Unmarshal(promptBytes, &m); err == nil {
 			if p, ok := m["prompt"].(string); ok {
 				systemPrompt = p
 			}
