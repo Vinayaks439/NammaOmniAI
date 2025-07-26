@@ -41,7 +41,7 @@ export function useSummaryStream(
     abortRef.current = controller
 
     const endpoint =
-      (process.env.NEXT_PUBLIC_GRPC_HOST || "http://localhost:8080") +
+      (process.env.NEXT_PUBLIC_GRPC_HOST || "http://10.1.0.2:8080") +
       "/summary.v1.SummaryService/StreamSummary"
 
     const frame = buildConnectFrame({ lat, long, areas })

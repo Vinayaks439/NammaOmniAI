@@ -49,7 +49,7 @@ export function useEnergyEventsStream(center: { lat: number, lng: number }) {
     abortRef.current = controller
 
     const endpoint =
-      (process.env.NEXT_PUBLIC_GRPC_HOST || "http://localhost:8080") +
+      (process.env.NEXT_PUBLIC_GRPC_HOST || "http://10.1.0.2:8080") +
       "/energymanagementevents.v1.EnergyManagementEventsService/StreamEnergyManagementEvents"
 
     const frame = buildConnectFrame({ })
