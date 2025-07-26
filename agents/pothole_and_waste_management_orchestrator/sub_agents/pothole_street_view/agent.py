@@ -19,7 +19,7 @@ from typing import Dict, List
 from google.adk import Agent
 from google.adk.tools.agent_tool import AgentTool
 
-from street_view_agent import collect_street_view_images  # in‑memory uploader
+from pothole_street_view import collect_street_view_images  # in‑memory uploader
 from .prompt import POTHOLE_AGENT_PROMPT
 
 MODEL = "gemini-2.5-pro"
