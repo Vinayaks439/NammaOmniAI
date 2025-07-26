@@ -38,14 +38,14 @@ import { useSummaryStream } from "@/hooks/use-summary-stream";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTrafficEventsStream } from "@/hooks/use-traffic-events-stream";
 import { OutageSummaryEntry, useEnergyEventsStream } from "@/hooks/use-energy-events-stream";
-
+import { CulturalEventsEntry, useCultureEventsStream } from "@/hooks/use-culture-events-stream";
 // Type imports
 import type {
   TrafficDigestEntry,
 } from "@/hooks/use-traffic-events-stream";
 
 // Type import (optional – only needed if you reference the type explicitly)
-import type { WeatherSummary } from "@/hooks/use-traffic-events-stream";
+import type { WeatherSummary } from "@/hooks/use-traffic-events-stream";    
 
 // ────────────────────────────────────────────────────────────────
 // Unified feed item shape
@@ -185,45 +185,6 @@ const QuickStats = ({
 // ... existing code ...
 
 // Sample static items (kept for fallback / demo)
-const allFeedItems: FeedItem[] = [
-  {
-    id: 1,
-    category: "Traffic",
-    location: "Outer Ring Road, Bengaluru",
-    title: "Heavy Traffic on Outer Ring Road",
-    summary:
-      "Slow moving traffic reported between Silk Board and Marathahalli.",
-    severity: "HIGH",
-    advice: "Consider alternate routes.",
-  },
-  {
-    id: 2,
-    category: "Power",
-    location: "Indiranagar Area",
-    title: "Power Cut Scheduled",
-    summary: "Planned maintenance from 10 AM to 4 PM.",
-    severity: "MEDIUM",
-    advice: "Keep backup power if required.",
-  },
-  {
-    id: 3,
-    category: "Emergency",
-    location: "Commercial Street",
-    title: "Fire Reported at Commercial Building",
-    summary: "Emergency services dispatched. Avoid the area.",
-    severity: "CRITICAL",
-    advice: "Avoid the area.",
-  },
-  {
-    id: 4,
-    category: "Public Events",
-    location: "MG Road",
-    title: "Charity Marathon Today",
-    summary: "Road closures on MG Road from 6 AM to 10 AM.",
-    severity: "LOW",
-    advice: "Plan commute accordingly.",
-  },
-];
 
 const categoryDetails: {
   [key: string]: { icon: React.ElementType; color: string };
@@ -231,6 +192,7 @@ const categoryDetails: {
   Traffic: { icon: TrafficCone, color: "bg-indigo-500/20 text-indigo-400" },
   Power: { icon: Wrench, color: "bg-pink-500/20 text-pink-400" },
   Weather: { icon: PartyPopper, color: "bg-purple-500/20 text-purple-400" },
+  Cultural: { icon: Book, color: "bg-green-500/20 text-green-400" },
 };
 
 const severityDetails: {
@@ -246,12 +208,14 @@ const LiveFeed = ({
   trafficEvents,
   weatherEvents,
   energyEvents,
+  culturalEvents,
   filter,
   setFilter,
 }: {
   trafficEvents: TrafficDigestEntry[];
   weatherEvents: WeatherSummary[];
   energyEvents: OutageSummaryEntry[];
+  culturalEvents: CulturalEventsEntry[];
   filter: string;
   setFilter: (f: string) => void;
 }) => {
@@ -275,13 +239,27 @@ const LiveFeed = ({
     advice: "",
   }));
 
+  const mappedCultural: FeedItem[] = culturalEvents.map((c, idx) => ({
+    id: Date.now() + trafficEvents.length + weatherEvents.length + energyEvents.length + idx,
+    category: "Cultural",
+    location: c.area,
+    title: c.title,
+    summary: c.description,
+    venue: c.venue,
+    price: c.price,
+    link: c.link,
+    description: c.description,
+    severity: "",
+    advice: "",
+  }));
+
   const mappedEnergy: FeedItem[] = energyEvents.map((e, idx) => {
     const summaryLocation =
       e.locations[
         e.locations.findIndex((location) => e.locations.includes(location))
       ];
     return {
-      id: Date.now() + trafficEvents.length + weatherEvents.length + idx,
+      id: Date.now() + trafficEvents.length + weatherEvents.length + energyEvents.length + idx,
       category: "Power",
       location: summaryLocation,
       title: `${e.reason} in ${summaryLocation}`,
@@ -291,7 +269,7 @@ const LiveFeed = ({
     };
   });
 
-  const items = [...mappedTraffic, ...mappedWeather, ...mappedEnergy];
+  const items = [...mappedTraffic, ...mappedWeather, ...mappedEnergy, ...mappedCultural];
 
   const filteredItems =
     filter === "All Categories"
@@ -444,6 +422,7 @@ export default function DashboardPage() {
 
   const summary = useSummaryStream(center.lat, center.lng, areas);
   const energyEvents = useEnergyEventsStream(center);
+  const culturalEvents = useCultureEventsStream(areas);
   const [trafficEvents, weatherEvents] = useTrafficEventsStream(center);
 
   return (
@@ -480,6 +459,7 @@ export default function DashboardPage() {
               trafficEvents={trafficEvents}
               weatherEvents={weatherEvents}
               energyEvents={energyEvents}
+              culturalEvents={culturalEvents}
               filter={feedFilter}
               setFilter={setFeedFilter}
             />
