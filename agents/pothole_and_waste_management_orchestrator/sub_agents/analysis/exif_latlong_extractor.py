@@ -1,10 +1,50 @@
+#!/usr/bin/env python3
+"""
+exif_latlong_extractor.py
+----------------------------------
+Cloud‑agent‑friendly helper that extracts GPS latitude / longitude **only from an
+HTTP/HTTPS image URL** (JPEG / PNG / HEIC, etc.). Local file paths are no longer
+accepted as input.
+
+Typical usage inside a Cloud Function or Cloud Run service::
+
+    from exif_latlong_extractor import extract_exif_lat_lng
+
+    lat, lng = extract_exif_lat_lng(request_json["image_url"])
+
+If the image lacks embedded GPS data both values come back as ``None``. All
+network / decoding errors raise exceptions, so your calling code can decide
+whether to retry or log.
+
+Dependencies:
+    pip install pillow pillow‑heif pyheif piexif requests
+    # Linux users: sudo apt install libheif1 libheif-dev
+"""
+
+from __future__ import annotations
+
+import os
+import tempfile
+from typing import Optional, Tuple
+
 import requests
-from io import BytesIO
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from PIL.ExifTags import TAGS, GPSTAGS
 
-def _get_if_exist(data, key):
+# Attempt to register Pillow‑HEIF plugin for native .heic support
+try:
+    import pillow_heif
+
+    pillow_heif.register_heif_opener()
+except ImportError:  # optional dependency
+    pillow_heif = None  # pragma: no cover
+
+
+# ── helpers ────────────────────────────────────────────────────────────────
+
+def _get_if_exist(data: dict, key):
     return data.get(key)
+
 
 def _convert_to_degrees(value):
     d = value[0][0] / value[0][1]
@@ -12,52 +52,125 @@ def _convert_to_degrees(value):
     s = value[2][0] / value[2][1]
     return d + (m / 60.0) + (s / 3600.0)
 
-def extract_exif_lat_lng(image_path: str):
-    """
-    Reads an image (from disk or URL) and extracts latitude/longitude from EXIF.
-    On HTTP errors or missing EXIF, returns (None, None).
+
+# ── core extraction routines ───────────────────────────────────────────────
+
+def _extract_from_file(image_path: str) -> Tuple[Optional[float], Optional[float]]:
+    """Read EXIF from *image_path* and return ``(lat, lng)`` or ``(None, None)``.
+
+    Falls back to *pyheif* + *piexif* for HEIC when Pillow cannot decode. All
+    failures raise ``RuntimeError`` so the caller can handle them appropriately.
     """
     try:
-        if image_path.startswith(("http://", "https://")):
-            resp = requests.get(image_path, timeout=5)
-            resp.raise_for_status()
-            img = Image.open(BytesIO(resp.content))
-        else:
-            img = Image.open(image_path)
-
+        img = Image.open(image_path)
         exif_data = img._getexif() or {}
-    except requests.exceptions.HTTPError as he:
-        # 404, 500, etc. — log and fall back to no-EXIF
-        print(f"[WARN] HTTP error fetching EXIF URL {image_path}: {he}")
-        return None, None
-    except requests.exceptions.RequestException as re:
-        # Network timeout, DNS failure, etc.
-        print(f"[WARN] Network error fetching EXIF URL {image_path}: {re}")
-        return None, None
-    except Exception as e:
-        # PIL can also throw on bad image data
-        print(f"[WARN] Failed to open image {image_path}: {e}")
-        return None, None
+        return _parse_exif_dict(exif_data)
 
+    except UnidentifiedImageError as first_exc:
+        lower = image_path.lower()
+        if lower.endswith((".heic", ".heif")):
+            return _extract_heic_with_pyheif(image_path, first_exc)
+        raise RuntimeError(f"Failed to read EXIF from {image_path}: {first_exc}") from first_exc
+
+
+def _parse_exif_dict(exif_data: dict) -> Tuple[Optional[float], Optional[float]]:
     gps_info = {}
     for tag, val in exif_data.items():
-        decoded = TAGS.get(tag, tag)
-        if decoded == "GPSInfo" and isinstance(val, dict):
-            for t, v in val.items():
-                sub_decoded = GPSTAGS.get(t, t)
-                gps_info[sub_decoded] = v
+        if TAGS.get(tag, tag) == "GPSInfo":
+            for t in val:
+                gps_info[GPSTAGS.get(t, t)] = val[t]
 
-    gps_lat = _get_if_exist(gps_info, "GPSLatitude")
-    gps_lat_ref = _get_if_exist(gps_info, "GPSLatitudeRef")
-    gps_lon = _get_if_exist(gps_info, "GPSLongitude")
-    gps_lon_ref = _get_if_exist(gps_info, "GPSLongitudeRef")
+    gps_latitude = _get_if_exist(gps_info, "GPSLatitude")
+    gps_latitude_ref = _get_if_exist(gps_info, "GPSLatitudeRef")
+    gps_longitude = _get_if_exist(gps_info, "GPSLongitude")
+    gps_longitude_ref = _get_if_exist(gps_info, "GPSLongitudeRef")
 
-    if gps_lat and gps_lat_ref and gps_lon and gps_lon_ref:
-        lat = _convert_to_degrees(gps_lat)
-        if gps_lat_ref != "N": lat = -lat
-        lng = _convert_to_degrees(gps_lon)
-        if gps_lon_ref != "E": lng = -lng
+    if gps_latitude and gps_latitude_ref and gps_longitude and gps_longitude_ref:
+        lat = _convert_to_degrees(gps_latitude)
+        if gps_latitude_ref != "N":
+            lat = -lat
+        lng = _convert_to_degrees(gps_longitude)
+        if gps_longitude_ref != "E":
+            lng = -lng
         return lat, lng
 
-    # No GPS tags found
     return None, None
+
+
+def _extract_heic_with_pyheif(image_path: str, orig_exc: Exception):
+    try:
+        import pyheif
+        import piexif
+    except ImportError as ie:
+        raise RuntimeError(
+            "HEIC decoding requires pyheif & piexif or pillow‑heif.\n"
+            "Install with: pip install pyheif piexif"
+        ) from ie
+
+    try:
+        heif_file = pyheif.read(image_path)
+    except Exception as he:
+        raise RuntimeError(f"pyheif failed to decode {image_path}: {he}") from he
+
+    exif_dict = {}
+    for meta in heif_file.metadata or []:
+        if meta["type"] == "Exif":
+            exif_dict = piexif.load(meta["data"])
+            break
+
+    gps_ifd = exif_dict.get("GPS", {}) if exif_dict else {}
+
+    gps_latitude = gps_ifd.get(piexif.GPSIFD.GPSLatitude)
+    gps_latitude_ref = gps_ifd.get(piexif.GPSIFD.GPSLatitudeRef)
+    gps_longitude = gps_ifd.get(piexif.GPSIFD.GPSLongitude)
+    gps_longitude_ref = gps_ifd.get(piexif.GPSIFD.GPSLongitudeRef)
+
+    if gps_latitude and gps_latitude_ref and gps_longitude and gps_longitude_ref:
+        lat = _convert_to_degrees(gps_latitude)
+        if gps_latitude_ref.decode() != "N":
+            lat = -lat
+        lng = _convert_to_degrees(gps_longitude)
+        if gps_longitude_ref.decode() != "E":
+            lng = -lng
+        return lat, lng
+
+    return None, None
+
+
+# ── public API ─────────────────────────────────────────────────────────────
+
+def extract_exif_lat_lng(url: str, timeout: int = 15) -> Tuple[Optional[float], Optional[float]]:
+    """Download *url* and return its embedded GPS coordinates.
+
+    Parameters
+    ----------
+    url : str
+        Must start with ``http://`` or ``https://``.
+    timeout : int, optional
+        Seconds to wait for the HTTP response (default 15).
+    """
+    if not url.startswith(("http://", "https://")):
+        raise ValueError("Input must be an HTTP/HTTPS image URL – local files are not supported.")
+
+    resp = requests.get(url, timeout=timeout)
+    resp.raise_for_status()
+
+    raw_bytes = resp.content
+    suffix = os.path.splitext(url.split("?")[0])[-1].lower() or ".jpg"
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(raw_bytes)
+        tmp_path = tmp.name
+    try:
+        return _extract_from_file(tmp_path)
+    finally:
+        os.remove(tmp_path)
+
+
+# Backward‑compat alias:
+extract_exif_lat_lng_url = extract_exif_lat_lng
+
+__all__ = [
+    "extract_exif_lat_lng",
+    "extract_exif_lat_lng_url",
+]
