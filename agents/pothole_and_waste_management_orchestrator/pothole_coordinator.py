@@ -62,9 +62,10 @@ class PotholeDetectionOutput(BaseModel):
 
     @field_validator("image_paths", mode="after")
     @classmethod
-    def stringify_paths(cls, v: List[Any]) -> List[str]:  # noqa: D401
-        return [str(p) for p in v]
-
+    def stringify_paths(cls, v):
+        if isinstance(v, dict):
+            return json.dumps(v)
+        return str(v)
 # ── Agent definition ─────────────────────────────────────────────────────────
 pothole_coordinator = LlmAgent(
     name="pothole_coordinator",
