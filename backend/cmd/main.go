@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	firebase "firebase.google.com/go"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
@@ -404,6 +405,11 @@ func main() {
 	}
 	if env := os.Getenv("PUBSUB_SUBSCRIPTION_ID"); env != "" {
 		log.Printf("Using PUBSUB_SUBSCRIPTION_ID=%s", env)
+	}
+
+	_, err := firebase.NewApp(context.Background(), nil)
+	if err != nil {
+		log.Fatalf("error initializing app: %v\n", err)
 	}
 
 	mux := http.NewServeMux()

@@ -4,7 +4,9 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import { AppProvider } from "@/contexts/app-context"
+import { FirebaseInitializer } from "@/components/firebase-initializer"
 
+    
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
@@ -23,6 +25,7 @@ export default function RootLayout({
       <body className={`${inter.className} bg-[#09090B] text-white`}>
         <AppProvider>{children}</AppProvider>
         <Toaster />
+        <FirebaseInitializer />
       </body>
     </html>
   )

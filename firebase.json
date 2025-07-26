@@ -1,0 +1,18 @@
+{
+  "apphosting": {
+    "backendId": "frontend",
+
+    "rootDir": ".",
+
+    "ignore": [
+      ".git/**",
+      "firebase-debug.log",
+      "firebase-debug.*.log",
+
+      "backend/**",
+      "agents/**",
+      "terraform/**",
+      "docs/**"
+    ]
+  }
+}
