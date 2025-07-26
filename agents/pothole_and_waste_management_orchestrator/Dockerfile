@@ -1,33 +1,33 @@
-# ---------- Dockerfile ----------
-# 1. use slim base with Python 3.12
-FROM python:3.13-slim AS runtime
+# ──────────────────────────────────────────────────────────────────────────────
+# Dockerfile ‑ Pothole Detection Cloud Function (Pub/Sub trigger)
+#
+# • Uses python 3.11‑slim as the base image
+# • Installs pip dependencies (from requirements.txt)
+# • Adds the source code
+# • Runs the Google Functions Framework so the function can be served
+#   locally, on Cloud Functions (2nd gen) or Cloud Run
+# ──────────────────────────────────────────────────────────────────────────────
 
-# 2. set working directory
-WORKDIR /app
+FROM python:3.13-slim
 
-# 3. install system packages (just in case httpx/OpenSSL need build tools)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential curl && \
+# Recommended: prevent Python from buffering stdout/stderr so logs appear immediately
+ENV PYTHONUNBUFFERED=1 \
+    # Cloud Functions / Cloud Run default port
+    PORT=8080
+
+# Install system packages your deps might need (gcc, libssl, etc.)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential && \
     rm -rf /var/lib/apt/lists/*
 
-# 4. copy dependency list & install
+# ── Copy requirements and install ────────────────────────────────────────────
+WORKDIR /app
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-# 5. copy project code
-#    adjust the source path if your repo layout differs
+# ── Copy the rest of the source code ─────────────────────────────────────────
 COPY . .
 
-# 6. environment variables
-#    – model + temperature are read from agent_config.json
-#    – supply your API key and credentials at runtime:
-#      docker run \
-#        -e GOOGLE_API_KEY=<API_KEY> \
-#        -e GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json \
-#        -v /local/path/to/key.json:/path/to/key.json \
-ENV PYTHONUNBUFFERED=1 
-
-# 7. default command
-#    change the path if you moved or renamed orca.py
-CMD ["functions-framework", "--target=run_pothole_and_waste_management_agent", "--signature-type=cloudevent"]
-
+# ── Functions Framework start‑up ─────────────────────────────────────────────
+# `--target` is the name of the callable in main.py
+ENTRYPOINT ["functions-framework", "--target", "runPotholeDetectionAgent","--signature-type=cloudevent"]
