@@ -9,7 +9,7 @@ spec:
   ports:
     - port: {{ .Values.service.port }}
       targetPort: 8080
-      protocol: http
+      protocol: TCP
       name: http
   selector:
     {{- include "backend.selectorLabels" . | nindent 4 }}
