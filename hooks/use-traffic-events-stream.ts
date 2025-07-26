@@ -59,7 +59,7 @@ export function useTrafficEventsStream(
     abortRef.current = controller
 
     const endpoint =
-      (process.env.NEXT_PUBLIC_GRPC_HOST || "http://localhost:8080") +
+      (process.env.NEXT_PUBLIC_GRPC_HOST || "http://10.1.0.2:8080") +
       "/trafficupdaterevents.v1.TrafficUpdateEventsService/StreamTrafficUpdateEvents"
 
     const frame = buildConnectFrame({ })
