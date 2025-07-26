@@ -11,13 +11,15 @@ import (
 	"sync"
 	"time"
 
+	"backend/db"
+	summaryv1 "backend/gen/summary/v1"
+	summaryv1connect "backend/gen/summary/v1/summaryv1connect"
+
 	"connectrpc.com/connect"
+	"github.com/gin-gonic/gin"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"gopkg.in/yaml.v3"
-
-	summaryv1 "backend/gen/summary/v1"
-	summaryv1connect "backend/gen/summary/v1/summaryv1connect"
 
 	// ---- generated packages for the two new RPCs ----
 	energymanagementeventsv1 "backend/gen/energymanagementevents/v1"
@@ -27,6 +29,7 @@ import (
 
 	"backend/config"
 	"backend/internal"
+	"backend/server"
 
 	"golang.org/x/sync/errgroup"
 	genai "google.golang.org/genai"
@@ -400,15 +403,28 @@ func (s *trafficUpdateEventsServer) StreamTrafficUpdateEvents(
 }
 
 func main() {
+	ctx := context.Background()
 	if env := os.Getenv("GCP_PROJECT_ID"); env != "" {
 		log.Printf("Using GCP_PROJECT_ID=%s", env)
 	}
 	if env := os.Getenv("PUBSUB_SUBSCRIPTION_ID"); env != "" {
 		log.Printf("Using PUBSUB_SUBSCRIPTION_ID=%s", env)
 	}
-
+	projectID := "namm-omni-dev"
+	dbClient, err := db.New(ctx, projectID)
+	if err != nil {
+		log.Fatalf("init firestore: %v", err)
+	}
+	defer dbClient.Close()
 	mux := http.NewServeMux()
-
+	r := gin.Default()
+	api := r.Group("/api/v1")
+	server.GetAlerts(api, dbClient)
+	server.PostAlerts(api, dbClient)
+	server.GetAlert(api, dbClient)
+	server.Healthz(api)
+	mux.Handle("/api/v1/alerts", r)
+	mux.Handle("/api/v1/healthz", r)
 	// Summary service
 	sumSrv := &summaryServer{}
 	sumPath, sumHandler := summaryv1connect.NewSummaryServiceHandler(sumSrv)

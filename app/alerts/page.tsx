@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AppHeader } from "@/components/shared/app-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Zap, AlertTriangle, TrafficCone, Wrench, PartyPopper, MapPin } from "lucide-react"
@@ -10,78 +10,47 @@ import { Button } from "@/components/ui/button"
 import { Settings } from "lucide-react"
 import { AlertConfigurationForm } from "@/components/alerts/alert-configuration-form"
 
+// ───────────────────────── Types ─────────────────────────
 type Severity = "All" | "Critical" | "High" | "Medium"
 type Category = "Emergency" | "Traffic" | "Civic Issues" | "Public Events"
 
-const allAlerts = [
-  {
-    id: 1,
-    severity: "Critical",
-    category: "Emergency",
-    title: "Fire at Commercial Street",
-    description: "Fire reported at commercial building. Emergency services on site.",
-    location: "Commercial Street, Shivaji Nagar",
-    timestamp: "10/01/2024, 23:00:00",
-  },
-  {
-    id: 2,
-    severity: "High",
-    category: "Traffic",
-    title: "Traffic Congestion on Outer Ring Road",
-    description: "Heavy traffic due to metro construction. Expect 30min delays.",
-    location: "Outer Ring Road, Electronic City",
-    timestamp: "10/01/2024, 18:15:00",
-  },
-  {
-    id: 3,
-    severity: "Medium",
-    category: "Civic Issues",
-    title: "Power Cut Scheduled",
-    description: "Planned maintenance from 10 AM to 4 PM.",
-    location: "Indiranagar Area",
-    timestamp: "10/01/2024, 14:03:00",
-  },
-  {
-    id: 4,
-    severity: "High",
-    category: "Emergency",
-    title: "Gas Leak Reported",
-    description: "Gas leak reported in residential area. Evacuation in progress.",
-    location: "HSR Layout, Sector 2",
-    timestamp: "10/01/2024, 11:30:00",
-  },
-]
+export interface Alert {
+  id?: string
+  severity?: Severity | string
+  category?: Category | string
+  title?: string
+  description?: string
+  location?: string
+  timestamp?: string
+  // optional backend fields
+  lat?: number
+  long?: number
+  sentiment?: string
+}
 
-const severityDetails: {
-  [key in Severity]: {
-    color: string
-    iconColor: string
-    count: number
-    label: string
-  }
-} = {
+// Styling meta (static)
+const severityStyles: Record<
+  Severity,
+  { color: string; iconColor: string; label: string }
+> = {
   All: {
     color: "bg-cyan-900/50 border-cyan-500/30",
     iconColor: "text-cyan-400",
-    count: allAlerts.length,
     label: "Active Events",
   },
   Critical: {
     color: "bg-red-900/50 border-red-500/30",
     iconColor: "text-red-400",
-    count: allAlerts.filter((a) => a.severity === "Critical").length,
     label: "Critical",
   },
   High: {
     color: "bg-orange-900/50 border-orange-500/30",
     iconColor: "text-orange-400",
-    count: allAlerts.filter((a) => a.severity === "High").length,
     label: "High Severity",
   },
   Medium: {
     color: "bg-yellow-900/50 border-yellow-500/30",
     iconColor: "text-yellow-400",
-    count: allAlerts.filter((a) => a.severity === "Medium").length,
     label: "Medium Severity",
   },
 }
@@ -96,14 +65,16 @@ const categoryIcons: { [key in Category]: React.ElementType } = {
 const AlertsStatsBar = ({
   selectedSeverity,
   onSelectSeverity,
+  counts,
 }: {
   selectedSeverity: Severity
   onSelectSeverity: (severity: Severity) => void
+  counts: Record<Severity, number>
 }) => {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-      {(Object.keys(severityDetails) as Severity[]).map((severity) => {
-        const details = severityDetails[severity]
+      {(Object.keys(severityStyles) as Severity[]).map((severity) => {
+        const details = severityStyles[severity]
         return (
           <Card
             key={severity}
@@ -126,7 +97,7 @@ const AlertsStatsBar = ({
               <Zap className={cn("h-4 w-4", details.iconColor)} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{details.count}</div>
+              <div className="text-2xl font-bold">{counts[severity]}</div>
             </CardContent>
           </Card>
         )
@@ -135,9 +106,9 @@ const AlertsStatsBar = ({
   )
 }
 
-const AlertItem = ({ alert }: { alert: (typeof allAlerts)[0] }) => {
-  const severity = severityDetails[alert.severity as Severity]
-  const Icon = categoryIcons[alert.category as Category]
+const AlertItem = ({ alert }: { alert: Alert }) => {
+  const severity = severityStyles[alert.severity as Severity] ?? severityStyles.All
+  const Icon = categoryIcons[alert.category as Category] ?? AlertTriangle
   return (
     <div className={cn("p-4 rounded-lg border", severity.color.replace("bg-", "border-"))}>
       <div className="flex items-center gap-3 mb-2">
@@ -164,9 +135,46 @@ const AlertItem = ({ alert }: { alert: (typeof allAlerts)[0] }) => {
 export default function AlertsPage() {
   const [selectedSeverity, setSelectedSeverity] = useState<Severity>("All")
   const [isConfiguring, setIsConfiguring] = useState(false)
+  const [alerts, setAlerts] = useState<Alert[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch alerts from Gin backend on mount
+  useEffect(() => {
+    async function loadAlerts() {
+        const req = new Request("http://localhost:8080/api/v1/alerts", {
+        method: "GET",
+        cache: "no-store",
+      })
+      const res = await fetch(req)
+      console.log("res", res)
+      if (res.ok) {
+        try {
+          const data = await res.json()
+          console.log("data", data)
+          setAlerts(data as Alert[])
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error(err)
+        } finally {
+          setLoading(false)
+        }
+      }
+    }
+    loadAlerts()
+  }, [])
 
   const filteredAlerts =
-    selectedSeverity === "All" ? allAlerts : allAlerts.filter((alert) => alert.severity === selectedSeverity)
+    selectedSeverity === "All"
+      ? alerts
+      : alerts.filter((alert) => alert.severity === selectedSeverity)
+
+  // Compute dynamic counts
+  const severityCounts: Record<Severity, number> = {
+    All: alerts.length,
+    Critical: alerts.filter((a) => a.severity === "Critical").length,
+    High: alerts.filter((a) => a.severity === "High").length,
+    Medium: alerts.filter((a) => a.severity === "Medium").length,
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#09090B]">
@@ -190,7 +198,11 @@ export default function AlertsPage() {
             </div>
           )}
           <div className={isConfiguring ? "md:col-span-2" : "md:col-span-3"}>
-            <AlertsStatsBar selectedSeverity={selectedSeverity} onSelectSeverity={setSelectedSeverity} />
+            <AlertsStatsBar
+              selectedSeverity={selectedSeverity}
+              onSelectSeverity={setSelectedSeverity}
+              counts={severityCounts}
+            />
             <Card className="bg-[#111113] border-gray-800">
               <CardHeader>
                 <CardTitle>
@@ -198,7 +210,9 @@ export default function AlertsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {filteredAlerts.length > 0 ? (
+                {loading ? (
+                  <p className="text-center text-gray-500 py-8">Loading…</p>
+                ) : filteredAlerts.length > 0 ? (
                   filteredAlerts.map((alert) => <AlertItem key={alert.id} alert={alert} />)
                 ) : (
                   <p className="text-center text-gray-500 py-8">No alerts match the selected severity.</p>
