@@ -17,7 +17,7 @@ type Client struct {
 // New creates a new Firestore client. The caller is responsible for calling
 // Close() when the process shuts down.
 func New(ctx context.Context, projectID string) (*Client, error) {
-	fs, err := firestore.NewClient(ctx, projectID)
+	fs, err := firestore.NewClientWithDatabase(ctx, projectID, "namma-omni-dev")
 	if err != nil {
 		return nil, err
 	}
@@ -26,43 +26,43 @@ func New(ctx context.Context, projectID string) (*Client, error) {
 
 func (c *Client) Close() error { return c.fs.Close() }
 
-// CreatePotholeReport persists a new report and returns its document ID.
-func (c *Client) CreatePotholeReport(ctx context.Context, r *PotholeReport) (string, error) {
+// CreateAlert persists a new report and returns its document ID.
+func (c *Client) CreateAlert(ctx context.Context, r *Alerts) (string, error) {
 	now := time.Now()
-	r.CreatedAt = now
-	r.LastUpdatedAt = now
-	ref, _, err := c.fs.Collection("pothole_reports").Add(ctx, r)
+	r.AlertTimestamp = now.Format(time.RFC3339)
+	ref, _, err := c.fs.Collection("alerts").Add(ctx, r)
 	if err != nil {
 		return "", err
 	}
 	return ref.ID, nil
 }
 
-// GetPotholeReport loads a single report by ID.
-func (c *Client) GetPotholeReport(ctx context.Context, id string) (*PotholeReport, error) {
-	doc, err := c.fs.Collection("pothole_reports").Doc(id).Get(ctx)
+// GetAlert loads a single report by ID.
+func (c *Client) GetAlert(ctx context.Context, id string) (*Alerts, error) {
+	// fetch the single document whose document-ID is `id`
+	docSnap, err := c.fs.Collection("alerts").Where("id", "==", id).Documents(ctx).Next()
 	if err != nil {
 		return nil, err
 	}
-	var rpt PotholeReport
-	if err := doc.DataTo(&rpt); err != nil {
+
+	var rpt Alerts
+	if err := docSnap.DataTo(&rpt); err != nil {
 		return nil, err
 	}
-	rpt.ReportID = doc.Ref.ID
+
+	// keep the Firestore document-ID around if you need it later
+	rpt.AlertID = docSnap.Ref.ID
 	return &rpt, nil
 }
 
-// ListPotholeReports returns the newest N reports for a user (or everyone if
+// ListAlerts returns the newest N reports for a user (or everyone if
 // userID is empty).
-func (c *Client) ListPotholeReports(ctx context.Context, limit int, userID string) ([]*PotholeReport, error) {
-	q := c.fs.Collection("pothole_reports").OrderBy("created_at", firestore.Desc).Limit(limit)
-	if userID != "" {
-		q = q.Where("user_id", "==", userID)
-	}
+func (c *Client) ListAlerts(ctx context.Context, limit int, userID string) ([]*Alerts, error) {
+	q := c.fs.Collection("alerts").OrderBy("timestamp", firestore.Desc).Limit(limit)
 	iter := q.Documents(ctx)
 	defer iter.Stop()
 
-	var out []*PotholeReport
+	var out []*Alerts
 	for {
 		doc, err := iter.Next()
 		if err != nil {
@@ -71,11 +71,11 @@ func (c *Client) ListPotholeReports(ctx context.Context, limit int, userID strin
 			}
 			return nil, err
 		}
-		var rpt PotholeReport
+		var rpt Alerts
 		if err := doc.DataTo(&rpt); err != nil {
 			return nil, err
 		}
-		rpt.ReportID = doc.Ref.ID
+		rpt.AlertID = doc.Ref.ID
 		out = append(out, &rpt)
 	}
 	return out, nil
@@ -90,6 +90,6 @@ func (c *Client) UpdateStatus(ctx context.Context, id string, newStatus string) 
 	if newStatus == "resolved" {
 		updates = append(updates, firestore.Update{Path: "resolved_at", Value: time.Now()})
 	}
-	_, err := c.fs.Collection("pothole_reports").Doc(id).Update(ctx, updates)
+	_, err := c.fs.Collection("alerts").Doc(id).Update(ctx, updates)
 	return err
 }
