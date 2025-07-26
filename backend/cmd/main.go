@@ -70,7 +70,7 @@ func (s *summaryServer) StreamSummary(
 
 	// Attempt to load richer system prompt from prompt.yaml (optional)
 	promptBytes, errPrompt := os.ReadFile("../prompt.yaml")
-	fmt.Println(promptBytes)
+	log.Printf("Loaded prompt.yaml content: %s", string(promptBytes))
 	var systemPrompt string
 	if errPrompt == nil {
 		var m map[string]interface{}
