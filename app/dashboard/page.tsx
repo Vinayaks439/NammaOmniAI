@@ -110,36 +110,79 @@ const AiSummaryCard = ({ summary }: { summary: string | null }) => {
   );
 };
 
-const QuickStats = () => (
-  <Card className="bg-[#111113] border-gray-800 h-full">
-    <CardHeader>
-      <CardTitle>Quick Stats</CardTitle>
-      <CardDescription>At-a-glance overview.</CardDescription>
-    </CardHeader>
-    <CardContent className="grid grid-cols-2 gap-4">
-      <div className="bg-white/5 border-white/10 p-4 text-center rounded-lg">
-        <Thermometer className="h-6 w-6 mx-auto text-orange-400 mb-2" />
-        <p className="text-xl font-bold">39°C</p>
-        <p className="text-sm text-gray-400">Weather</p>
-      </div>
-      <div className="bg-white/5 border-white/10 p-4 text-center rounded-lg">
-        <Clock className="h-6 w-6 mx-auto text-blue-400 mb-2" />
-        <p className="text-xl font-bold">45m</p>
-        <p className="text-sm text-gray-400">Commute</p>
-      </div>
-      <div className="bg-white/5 border-white/10 p-4 text-center rounded-lg">
-        <FileWarning className="h-6 w-6 mx-auto text-yellow-400 mb-2" />
-        <p className="text-xl font-bold">1</p>
-        <p className="text-sm text-gray-400">Issues</p>
-      </div>
-      <div className="bg-white/5 border-white/10 p-4 text-center rounded-lg">
-        <PartyPopper className="h-6 w-6 mx-auto text-purple-400 mb-2" />
-        <p className="text-xl font-bold">1</p>
-        <p className="text-sm text-gray-400">Events</p>
-      </div>
-    </CardContent>
-  </Card>
-);
+// ... existing code ...
+
+// ────────────────────────────────────────────────────────────────
+// Quick-stats card (weather, commute, issues)
+// ────────────────────────────────────────────────────────────────
+const QuickStats = ({
+  trafficEvents,
+  weatherEvents,
+}: {
+  trafficEvents: TrafficDigestEntry[];
+  weatherEvents: WeatherSummary[];
+}) => {
+  /* ── Weather ─────────────────────────────── */
+  const latestWeather = weatherEvents?.at(-1);
+  const temperature = latestWeather?.temperature ?? "24";
+
+  /* ── Commute delay (avg minutes) ─────────── */
+  const extracted = trafficEvents
+    ?.map((t) => {
+      const m = t.delay.match(/(\d+)/); // pull the number part (mins)
+      return m ? parseInt(m[1], 10) : null;
+    })
+    .filter((n): n is number => n !== null);
+  const avgDelay =
+    extracted && extracted.length > 0
+      ? `${Math.round(
+          extracted.reduce((a, b) => a + b, 0) / extracted.length,
+        )}m`
+      : trafficEvents?.[0]?.delay ?? "--";
+
+  /* ── Issues count ────────────────────────── */
+  const issuesCount = trafficEvents?.length;
+
+  return (
+    <Card className="bg-[#111113] border-gray-800 h-full">
+      <CardHeader>
+        <CardTitle>Quick Stats</CardTitle>
+        <CardDescription>At-a-glance overview.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid grid-cols-2 gap-4">
+        {/* Weather */}
+        <div className="bg-white/5 border-white/10 p-4 text-center rounded-lg">
+          <Thermometer className="h-6 w-6 mx-auto text-orange-400 mb-2" />
+          <p className="text-xl font-bold">{temperature}</p>
+          <p className="text-sm text-gray-400">Weather</p>
+        </div>
+
+        {/* Commute */}
+        <div className="bg-white/5 border-white/10 p-4 text-center rounded-lg">
+          <Clock className="h-6 w-6 mx-auto text-blue-400 mb-2" />
+          <p className="text-xl font-bold">{avgDelay}</p>
+          <p className="text-sm text-gray-400">Commute</p>
+        </div>
+
+        {/* Issues */}
+        <div className="bg-white/5 border-white/10 p-4 text-center rounded-lg">
+          <FileWarning className="h-6 w-6 mx-auto text-yellow-400 mb-2" />
+          <p className="text-xl font-bold">{issuesCount}</p>
+          <p className="text-sm text-gray-400">Issues</p>
+        </div>
+
+        {/* Events – still placeholder */}
+        <div className="bg-white/5 border-white/10 p-4 text-center rounded-lg">
+          <PartyPopper className="h-6 w-6 mx-auto text-purple-400 mb-2" />
+          <p className="text-xl font-bold">—</p>
+          <p className="text-sm text-gray-400">Events</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ... existing code ...
 
 // Sample static items (kept for fallback / demo)
 const allFeedItems: FeedItem[] = [
@@ -419,7 +462,7 @@ export default function DashboardPage() {
           </div>
           {/* //Comment the below 3 lines to remove Quick Stats */}
           <div className="lg:col-span-1">
-            <QuickStats />
+            <QuickStats trafficEvents={trafficEvents} weatherEvents={weatherEvents} />
           </div>
         </div>
 

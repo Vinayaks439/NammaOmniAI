@@ -112,7 +112,7 @@ async def _run_and_clean(user_input: str) -> TrafficDigestOutput:
     try:
         payload = json.loads(payload)
     except json.JSONDecodeError:
-        raise ValueError(f"Invalid JSON payload: {payload}")
+        return TrafficDigestOutput(bengaluru_traffic_digest=[],location_weather=[])
     
     return TrafficDigestOutput.model_validate(payload,strict=False)
 

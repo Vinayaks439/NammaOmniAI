@@ -35,8 +35,11 @@ def runTrafficUpdateAgent(cloudevent):
     digest = get_traffic_digest(example_prompt)
     logging.info("Traffic digest generated:\n%s", digest)   
     # Convert the digest to JSON and publish it
-    response = json.dumps(digest.model_dump(), indent=2)
-    
+    try:
+        response = json.dumps(digest.model_dump(), indent=2)
+    except json.JSONDecodeError:
+        publish_messages(digest.model_dump(), lambda e: logging.error(f"Error publishing message: {e}"))
+        return '', 200
     # Publish the response to Pub/Sub
     publish_messages(response, lambda e: logging.error(f"Error publishing message: {e}"))
     return '', 200

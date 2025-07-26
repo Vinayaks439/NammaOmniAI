@@ -86,7 +86,7 @@ async def _run_and_clean(user_input: str) -> EnergyDigestOutput:
     try:
         payload = json.loads(payload)
     except json.JSONDecodeError:
-        raise ValueError(f"Invalid JSON payload: {payload}")
+        return EnergyDigestOutput(outage_summary=[])
 
     return EnergyDigestOutput.model_validate(payload, strict=False)
 
