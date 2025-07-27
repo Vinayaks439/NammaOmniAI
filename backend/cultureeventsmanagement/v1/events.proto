@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package cultureeventsmanagement.v1;
+
+option go_package = "backend/gen/cultureeventsmanagement/v1;cultureeventsmanagementv1";
+
+// The CulturalEventsManagementService defines the streaming endpoint for real-time events.
+service CulturalEventsManagementService {
+    // StreamCulturalEventsManagementEvents establishes a grpc-web streaming endpoint that pushes StreamCulturalEventsManagementEventsResponse messages.
+    rpc StreamCulturalEventsManagementEvents(StreamCulturalEventsManagementEventsRequest) returns (stream StreamCulturalEventsManagementEventsResponse) {}
+}
+
+// Request message for streaming events.
+// This can include filtering options in the future if needed.
+message StreamCulturalEventsManagementEventsRequest {
+    // Optional filter parameter (e.g., event type or keyword).
+    repeated string areas = 1;
+}
+
+// Represents a real-time event.
+message StreamCulturalEventsManagementEventsResponse {  
+    // Unique identifier for the event.
+    string id = 1;
+    // Timestamp in epoch seconds.
+    int64 timestamp = 2;
+
+    // NEW – parsed content (replaces the old “payload” string)
+    repeated CulturalEventsEntry cultural_events = 3;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Nested message definition
+// ────────────────────────────────────────────────────────────────
+message CulturalEventsEntry {
+  string event_date = 1;
+  string event_time = 2;
+  string title = 3;
+  string venue = 4;
+  string area = 5;
+  string category = 6;
+  string price = 7;
+  string link = 8;
+  string description = 9;
+}
+
+// // Enumeration of possible event types.
+// enum EnergyManagementEventsType {
+//     // Unspecified event type.
+//     EVENT_TYPE_UNKNOWN_UNSPECIFIED = 0;
+//     EVENT_TYPE_TRAFFIC = 1;
+//     EVENT_TYPE_WASTE = 2;
+//     EVENT_TYPE_ENERGY = 3;
+//     EVENT_TYPE_EMERGENCY = 4;
+// }

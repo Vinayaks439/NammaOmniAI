@@ -22,12 +22,13 @@ import (
 	"gopkg.in/yaml.v3"
 
 	// ---- generated packages for the two new RPCs ----
+	"backend/config"
+	culturaleventsmanagementv1 "backend/gen/cultureeventsmanagement/v1"
+	culturaleventsmanagementv1connect "backend/gen/cultureeventsmanagement/v1/cultureeventsmanagementv1connect"
 	energymanagementeventsv1 "backend/gen/energymanagementevents/v1"
 	energymanagementeventsv1connect "backend/gen/energymanagementevents/v1/energymanagementeventsv1connect"
 	trafficupdatereventsv1 "backend/gen/trafficupdaterevents/v1"
 	trafficupdatereventsv1connect "backend/gen/trafficupdaterevents/v1/trafficupdatereventsv1connect"
-
-	"backend/config"
 	"backend/internal"
 	"backend/server"
 
@@ -116,6 +117,7 @@ func (s *summaryServer) StreamSummary(
 	triggerTopics := []string{
 		"trigger-traffic-update-agent",
 		"trigger-energy-management-agent",
+		"trigger-cultural-events-agent",
 	}
 
 	for _, topicID := range triggerTopics {
@@ -130,15 +132,15 @@ func (s *summaryServer) StreamSummary(
 	var mu sync.Mutex
 	var latestEnergy string
 	var latestTraffic string
-
+	var latestCulturalEvents string
 	maybeGenerate := func() error {
 		mu.Lock()
 		defer mu.Unlock()
-		if latestEnergy == "" || latestTraffic == "" {
+		if latestEnergy == "" || latestTraffic == "" || latestCulturalEvents == "" {
 			return nil // need both
 		}
 
-		prompt := systemPrompt + "\n\n" + latestEnergy + "\n" + latestTraffic
+		prompt := systemPrompt + "\n\n" + latestEnergy + "\n" + latestTraffic + "\n" + latestCulturalEvents
 		fmt.Println("prompt to gemini", prompt)
 		resp, err := genClient.Models.GenerateContent(ctx, cfg.Model, genai.Text(prompt), nil)
 		if err != nil {
@@ -188,6 +190,29 @@ func (s *summaryServer) StreamSummary(
 				log.Printf("TRAFFIC raw: %d bytes, %s", len(text), text)
 				mu.Lock()
 				latestTraffic = text
+				mu.Unlock()
+				return maybeGenerate()
+			},
+		)
+		return summ.Run(ctx)
+	})
+
+	// ---- CULTURAL EVENTS summarizer ----
+
+	culturalEventsCh, cancelCulturalEvents, err := internal.Subscribe(context.Background(), gcpProjectID, "cultural-events-data-sub")
+	if err != nil {
+		return err
+	}
+	g.Go(func() error {
+		defer cancelCulturalEvents()
+		summ := internal.NewSummarizer(
+			culturalEventsCh,
+			model,        // model not used
+			systemPrompt, // prompt not used
+			func(text string) error {
+				log.Printf("CULTURAL EVENTS raw: %d bytes, %s", len(text), text)
+				mu.Lock()
+				latestCulturalEvents = text
 				mu.Unlock()
 				return maybeGenerate()
 			},
@@ -402,6 +427,70 @@ func (s *trafficUpdateEventsServer) StreamTrafficUpdateEvents(
 	}
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. Cultural-Events live-feed server
+// ─────────────────────────────────────────────────────────────────────────────
+type culturalEventsEventsServer struct{}
+
+func (s *culturalEventsEventsServer) StreamCulturalEventsManagementEvents(
+	ctx context.Context,
+	req *connect.Request[culturaleventsmanagementv1.StreamCulturalEventsManagementEventsRequest],
+	stream *connect.ServerStream[culturaleventsmanagementv1.StreamCulturalEventsManagementEventsResponse],
+) error {
+	ch, cancel, err := internal.Subscribe(context.Background(), gcpProjectID, "cultural-events-data-sub")
+	if err != nil {
+		return err
+	}
+	defer cancel()
+
+	// Generic container
+	type rawPayload map[string]json.RawMessage
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case raw, ok := <-ch:
+			if !ok {
+				return nil
+			}
+			var parsed rawPayload
+			if err := safeUnmarshal([]byte(raw), &parsed); err != nil {
+				log.Printf("Failed to parse JSON payload: %v. Raw data: %s", err, raw)
+				continue
+			}
+			var culturalEvents []culturaleventsmanagementv1.CulturalEventsEntry
+			if rm, ok := parsed["cultural_events"]; ok {
+				if err := safeUnmarshal(rm, &culturalEvents); err != nil {
+					log.Printf("Failed to parse cultural events: %v", err)
+					continue
+				}
+			}
+			resp := &culturaleventsmanagementv1.StreamCulturalEventsManagementEventsResponse{
+				Id:        fmt.Sprintf("%d", time.Now().UnixNano()),
+				Timestamp: time.Now().Unix(),
+			}
+			for _, ev := range culturalEvents {
+				resp.CulturalEvents = append(resp.CulturalEvents, &culturaleventsmanagementv1.CulturalEventsEntry{
+					EventDate:   ev.EventDate,
+					EventTime:   ev.EventTime,
+					Title:       ev.Title,
+					Venue:       ev.Venue,
+					Area:        ev.Area,
+					Category:    ev.Category,
+					Price:       ev.Price,
+					Link:        ev.Link,
+					Description: ev.Description,
+				})
+			}
+			log.Printf("Sending cultural events: %v", resp)
+			if err := stream.Send(resp); err != nil {
+				return err
+			}
+		}
+	}
+}
+
 func main() {
 	ctx := context.Background()
 	if env := os.Getenv("GCP_PROJECT_ID"); env != "" {
@@ -440,6 +529,11 @@ func main() {
 	trafficPath, trafficHandler := trafficupdatereventsv1connect.NewTrafficUpdateEventsServiceHandler(trafficSrv)
 	mux.Handle(trafficPath, trafficHandler)
 
+	// Cultural-Events live-feed service
+	culturalEventsSrv := &culturalEventsEventsServer{}
+	culturalEventsPath, culturalEventsHandler := culturaleventsmanagementv1connect.NewCulturalEventsManagementServiceHandler(culturalEventsSrv)
+	mux.Handle(culturalEventsPath, culturalEventsHandler)
+
 	// single h2c wrap → then CORS
 	h2cHandler := h2c.NewHandler(mux, &http2.Server{})
 	corsHandler := withCORS(h2cHandler)
@@ -447,6 +541,7 @@ func main() {
 	log.Printf("Serving SummaryService at %s", sumPath)
 	log.Printf("Serving EnergyManagementEventsService at %s", energyPath)
 	log.Printf("Serving TrafficUpdateEventsService at %s", trafficPath)
+	log.Printf("Serving CulturalEventsManagementEventsService at %s", culturalEventsPath)
 	log.Printf("Listening on localhost:8080")
 	if err := http.ListenAndServe("localhost:8080", corsHandler); err != nil {
 		log.Fatalf("Server failed: %v", err)
